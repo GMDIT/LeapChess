@@ -123,7 +123,7 @@ var shader_name = "adows.sh";
 function CameraMoveMouse();
 function DrawGrid(col, size);
 
-function DrawGroundLine(size, pos, color);
+function DrawGroundLine(size, pos, color, centered);
 
 function RenderOnTexture();
 function FillTextureMatrix();
@@ -498,9 +498,9 @@ function OnFrame()
 	//DrawGrid([0.5, 0.5, 0.5], 32);
 
 	if(mov_moving)
-		DrawGroundLine(3, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5]);
+		DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5], true);
 	else
-		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9]);
+		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
 	//TODO:remove me
 	//foreach(var p in pieces)
@@ -573,21 +573,43 @@ function CameraMoveMouse()
 
 }
 
-function DrawGroundLine(size, pos, color)
+function DrawGroundLine(size, pos, color, centered)
 {
 	/* let's not mess up current OpenGL status */
 	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+
+	var x, z, c;
+	//TODO:fix
+	if(centered)
+	{
+	    x = Int((pos[0]+16) / 4) * 4 + 2 - 16;
+	    z = Int((pos[2]+16) / 4) * 4 + 2 - 16 ;
+	}
+
+	c = size / 2;
+
+
 
 	glLineWidth(1);
 	glDisable(GL_LIGHTING);
 	glColor(color);
 	var max = pos[1];
 	var min = 0;
-	var c = size / 2;
 
 	glBegin(GL_LINES);
-	glVertex(pos[0] + c, max, pos[2] + c);
-	glVertex(pos[0] + c, min, pos[2] + c);
+	if(centered)
+	{
+		glVertex(pos[0] + c, max, pos[2] + c);
+		glVertex(x, min, z);
+
+	}
+	else
+	{
+		glVertex(pos[0] + c, max, pos[2] + c);
+		glVertex(pos[0] + c, min, pos[2] + c);
+	}
+
+
 	glEnd();
 
 	/* polite restoration of previous OpenGL status */
