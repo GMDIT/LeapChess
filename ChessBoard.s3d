@@ -15,6 +15,8 @@ class ChessBoard
     var corner;
     var dimension;
 
+    var eatedCounters;
+
     var cbMatrix;
 
     var isDropping;
@@ -48,6 +50,8 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
 
     corner = c;
     dimension = d;
+
+    eatedCounters = {0,0};
 
     cbMatrix = Array(64);
 
@@ -214,7 +218,13 @@ function ChessBoard::DropToNewPosition(id)
 function ChessBoard::EatPieceIn(pos)
 {
     var p = cbMatrix[pos];
-    p.obj.SetPosition([0, 5, -20]);
+    var c = p.color;
+    var e = eatedCounters[c];
+    var posX = (c==CP_W ? -16 + (e*4)%8 : 16 - (e*4)%8);
+    var posZ = (c==CP_W ? -20 - (e<8?0:4) : 20 + (e<8?0:4));
+    p.obj.SetPosition(posX, 2, posZ);
+    eatedCounters[c] = e+1;
+    p.position = -1;
 }
 
 function ChessBoard::GetPiecePosition(id)
