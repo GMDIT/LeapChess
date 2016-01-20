@@ -1,0 +1,734 @@
+/* Include s3d symbols */
+#include <Script3d.h>
+#include <Camera.s3d.h>
+#include "ChessSet.s3d"
+#include "ChessPiece.s3d"
+#include "ChessBoard.s3d"
+
+
+/* Set global scene parameters */
+SET SCENE_FOV  = 60;
+SET SCENE_NEAR = 0.5;
+SET SCENE_FAR  = 1000;
+
+SET PORT = 4200;
+
+var browser;
+var res_x = 1600;
+var res_y = 900;
+
+
+// TODO: put your global variables here
+
+/* LeapMotion Data */
+var lm_channel;
+var localhost;
+var dataValues = {"0",0,0,0, 0,0,0 ,0,0,0};
+//				handID, palmX, palmY, palmZ, f0X, ... f1X...
+
+var gripDistance = 2.5;
+
+/*tracked fingers */
+var palm;
+var palm_pos = [10,20.0,0.0];
+var palm_mat;
+
+var f0;
+var f0_pos = [10,20.0,0.0];
+var f0_mat;
+
+var f1;
+var f1_pos = [20,20.0,0.0];
+var f1_mat;
+
+var reduction_factor = 10;
+
+/*Colors & mat */
+var m_white;
+var m_black;
+var c_white = [1, 1, 1];
+var c_red = [1, 0, 0];
+var c_blue =[0, 0, 1];
+var c_green = [0, 1, 0];
+var c_yellow = [0,1,1];
+
+/*3d Objects */
+var m_ball, o_ball;				// mesh e obj per il pallone
+var pos_ball    = [2.0,0.0,0.0];	// posizione iniziale della palla
+var o_ball_padre;				// nodo padre per ball, per la creazione di una gerarchia
+var trigger_ball_rotate = false;
+var trigger_ball_padre_rotate = false;
+var mat;
+
+
+/*chessboard */
+//var pieces = Array(16);
+//var pieces_pos = Array(16);
+//var pieces_dropping = Array(16);
+var cb;
+
+var m_chessboard;
+var o_chessboard;
+
+var m_table;
+var o_table;
+
+/*Var for drag and drop */
+var mov_gripping = false;
+var mov_touching = false;
+var mov_moving = false;
+var mov_offset;
+var mov_piece = -1;
+
+//var dropping = false;
+//var dropping_ids;
+
+/*Procedural Objects */
+var sphere;
+var box;
+var box_pos;
+
+/* Camera globals */
+var CamPos = [0, 45.0, 45.0];	// camera position
+var CamTarget = [0.0, 0.0, 0.0];
+
+/* Light globals */
+var Light0;
+//var PosL = [0.0, 15.0, -30];	// default light position
+var PosL = CamPos;//[-45,40,0]; //CamPos;//[20, 45.0, 15];	// default light position
+//var PosL = [-20, 100.0, -15];	// default light position
+
+var Light1;
+var PosL1 = [0.0, 15.0, 30];	// default light position
+
+/*shadow mapping*/
+var fbo;
+var shader;
+// additional OpenGL constants
+#define GL_DEPTH_COMPONENT16	0x81A5
+#define GL_DEPTH_COMPONENT24	0x81A6
+#define GL_DEPTH_COMPONENT32	0x81A7
+// a couple of handy application constants
+#define SCENE_CAMERA 0
+#define LIGHT_CAMERA 1
+
+var shader_name = "adows.sh";
+
+
+
+
+
+/* Function declarations */
+function CameraMoveMouse();
+function DrawGrid(col, size);
+
+function DrawGroundLine(size, pos, color);
+
+function RenderOnTexture();
+function FillTextureMatrix();
+function show_fbo();
+
+
+function OnDownload()
+{
+	// TODO: download your resources here
+	// E.g.: FileDownload("resource.ext");
+
+	FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
+	FileDownload("chessSet.zip");
+	FileDownload("textures.zip");
+
+	FileDownload(shader_name);
+}
+
+
+
+function OnInit(params)
+{
+		/* initialize camera */
+	CameraGetCurrent().SetPosition(CamPos);
+			//CameraGetCurrent().SetDirection(1, 1, 0);
+	CameraGetCurrent().SetTarget(CamTarget);
+			//SetScreenResolution(1280, 720);
+	//CameraSetPosition(PosL);
+	//CameraSetTarget(CamTarget);
+
+	browser = CVmWebBrowser();
+	//browser.FullScreen(true);
+	browser.SetSize(res_x, res_y);
+
+	/* initialize light */
+	Light0 = CVmLight();
+	Light0.SetPosition(PosL);
+	//Light0.SetDiffuse(0.65, 0.7, 0.5);
+	Light0.SetDiffuse(1, 1, 1);
+	Light0.SetAmbient(0.5, 0.5,0.55);
+	Light0.Enable();
+
+	Light1 = CVmLight();
+	Light1.SetPosition(CamPos);
+	Light1.SetAmbient(0.1, 0.1, 0.1);
+	Light1.Enable();
+
+
+	//sm
+	fbo = CVmFbo(VR_FBO_SHADOW, 4096, 4096, GL_DEPTH_COMPONENT);
+	shader = CVmShaderProgram(shader_name);
+
+	// TODO: put your initialization code here
+
+	/*Connectin to LeapMotionServer */
+	//localhost = NetGetIP();
+	//OutputLN(localhost);
+	lm_channel = NetCreateChannel(PORT, 0, VR_NO_BLOCKING);
+	OutputLN(lm_channel);
+
+	/*Init fingers */
+
+	// Creazione nuovo materiale
+	m_white = CVmMaterial();
+	m_white.ambient   = [0.5, 0.5, 0.5, 1.0]; //white
+	m_white.diffuse   = [0.9, 0.9, 0.9, 1.0];
+	m_white.specular  = [0.1, 0.1, 0.1, 0.5];
+	m_white.shininess = 0;
+
+	//m_white.SetTexture(CVmTexture("w_wood.jpg", NULL),0);
+
+	m_black = CVmMaterial();
+	m_black.ambient   = [0.1, 0.1, 0.1, 1.0]; //black
+	m_black.diffuse   = [0.1, 0.1, 0.1, 1.0];
+	m_black.specular  = [0.2, 0.1, 0.1, 0.5];
+	//m_black.emission = [1.0, 1.0, 0, 1];
+	m_black.shininess = 128;
+	m_black.transparency = 0.5;
+
+	mat = CVmMaterial();
+	mat.ambient   = [0.0, 0.0, 0.2, 1.0]; //blue
+	mat.diffuse   = [0.0, 0.0, 1.0, 1.0];
+	mat.specular  = [0.1, 0.1, 0.1, 1.0];
+	mat.shininess = 10;
+
+	//palm.ForceMaterial(mat);
+	//palm.ModulateMaterials(c_blue);
+
+	f0_mat = CVmMaterial();
+	f0_mat.ambient   = [0.0, 0.2, 0.0, 1.0]; //green
+	f0_mat.diffuse   = [0.0, 1.0, 0.0, 1.0];
+	f0_mat.specular  = [0.1, 0.1, 0.1, 1.0];
+	f0_mat.shininess = 7;
+	//f0.ForceMaterial(f0_mat);
+	//f0.ModulateMaterials(c_green);
+
+	f1_mat = CVmMaterial();
+	f1_mat.ambient   = [0.2, 0.0, 0.0, 1.0]; //red
+	f1_mat.diffuse   = [1.0, 0.0, 0.0, 1.0];
+	f1_mat.specular  = [0.1, 0.1, 0.1, 1.0];
+	f1_mat.shininess = 7;
+	//f1.ModulateMaterials(c_red);
+
+
+	/*Generating the sphere */
+	var num_seg = 10;
+	var radius = 0.7;
+	var hemisphere = 1;  //0.5= hemisphere, 1= sphere
+	var sphere_mesh = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
+	sphere_mesh.SetMaterial(mat);
+	palm = CVmObj();
+	palm.LinkToMesh(sphere_mesh);
+
+
+	var sphere_mesh_1 = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
+	sphere_mesh_1.CenterBoundingBox();
+	sphere_mesh_1.SetMaterial(f0_mat);
+	f0 = CVmObj(sphere_mesh_1);
+	//f0.LinkToMesh(sphere_mesh_1);
+
+	var sphere_mesh_2 = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
+	sphere_mesh_2.CenterBoundingBox();
+	sphere_mesh_2.SetMaterial(f1_mat);
+	f1 = CVmObj(sphere_mesh_2);
+	//f1.LinkToMesh(sphere_mesh_2);
+
+	m_chessboard = CVMNewMesh("chessboard.aam");
+	m_chessboard.CenterBoundingBox();
+	o_chessboard = CVmObj(m_chessboard);
+	o_chessboard.Normalize(32);
+	o_chessboard.SetPosition([0,0,0]);
+	o_chessboard.Rotate(90, 0, 1, 0);
+
+	//m_table = CVMNewMesh("woodenRoundTable.aam");
+	m_table = CVMNewMesh("octagonalTable.aam");
+	m_table.CenterBoundingBox();
+	//m_table.SetMaterial(m_white);
+	o_table = CVmObj(m_table);
+	o_table.Normalize(50);
+	o_table.SetPosition([0,-20,0]);
+
+	cb = ChessBoard([-16,0,-16], 32, m_white, m_black);
+	cb.Init();
+
+	/*
+	//Istantiate pieces
+	num_seg = 0;
+	var letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
+	for(var i = 0; i < 16; i++)
+	{
+		var min_corner = [0, 0, 0];
+		var max_corner = [3, 7 - (i<8?0:2), 3];
+
+
+		switch(i)
+		{
+			case 0:
+				pieces[i] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, m_white);
+				break;
+			case 1:
+				pieces[i] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, m_white);
+				break;
+			case 2:
+				pieces[i] = ChessPiece(CP_HORSE, AHto64("B", 1), CP_W, m_white, false);//getHorse(m_white);
+				break;
+			case 3:
+				pieces[i] = ChessPiece(CP_HORSE, AHto64("G", 1), CP_W, m_white, true);//getHorse(m_white);
+				break;
+			case 4:
+				pieces[i] = ChessPiece(CP_BISHOP, AHto64("C", 1), CP_W, m_white);//getHorse(m_white);
+				break;
+			case 5:
+				pieces[i] = ChessPiece(CP_BISHOP, AHto64("F", 1), CP_W, m_white);//getHorse(m_white);
+				break;
+			case 6:
+				pieces[i] = ChessPiece(CP_QUEEN, AHto64("D", 1), CP_W, m_white);//getHorse(m_white);
+				break;
+			case 7:
+				pieces[i] = ChessPiece(CP_KING, AHto64("E", 1), CP_W, m_white);//getHorse(m_white);
+				break;
+			default:
+				if(i<8)
+					pieces[i] = CVmObj(CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner));
+				else
+					pieces[i] = ChessPiece(CP_PAWN, AHto64(letters[i - 8], 2), CP_W, m_white);
+				break;
+		}
+
+		pieces[i].obj.SetPosition([0 + 0.5 + 4 * (i<8?0:1) -16, 0 , i*4 - 15.5 -(i<8?0:32) ]);
+		//pieces_pos[i] = pieces[i].GetPosition();
+
+		pieces_dropping[i] = false;
+	}
+	*/
+	CameraActivate(LIGHT_CAMERA);
+	CameraSetPosition(PosL);
+	CameraSetTarget([0, 0, 0]);
+
+	CameraActivate(SCENE_CAMERA);
+}
+
+
+
+function OnFrame()
+{
+
+	//receive packet
+	//var oldDataValues = {"0", 0,0,0};
+	if(NetDataReady(lm_channel))
+	{
+		var data = "";
+		var recIp = "";
+		data = NetReceiveFrom(lm_channel, &recIP);
+		//OutputLN(recIP);
+		//OutputLN(data);
+		//oldDataValues = dataValues;
+		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
+
+		palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
+		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
+		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
+	}
+
+	palm.SetPosition(palm_pos);
+	f0.SetPosition(f0_pos);
+	f1.SetPosition(f1_pos);
+
+
+	//OutputLN(modulus(f1_pos - f0_pos));
+	//Check if gripping
+	if(modulus(f1_pos - f0_pos) < gripDistance)
+	{
+		f0.forceMaterial(mat);
+		f1.forceMaterial(mat);
+		mov_gripping = true;
+	}
+	else
+	{
+		f0.forceMaterial();
+		f1.forceMaterial();
+		mov_gripping = false;
+	}
+
+
+	//Check if and which piece I'm touching
+	mov_touching = false;
+	//mov_piece = -1;
+	var tmp = cb.FindTouched(f0);
+	if(tmp != -1)
+	{
+		mov_touching = true;
+		if(!mov_moving)
+			mov_piece = tmp;
+	}
+
+	cb.DropPieces();
+
+	//for(var i=0; i<16 ; i++)
+	//{
+		/*
+		if(pieces[i].obj.IsCollidingBBox(f0))//|| pieces[i].IsCollidingBBox(f1))
+		{
+			pieces[i].obj.ModulateMaterials(1,1,1,0.5);
+			pieces[i].obj.ForceMaterial(mat);
+			mov_touching = true;
+			if(!mov_moving) //if I'm already moving a piece, don't update the id
+				mov_piece = i;
+		}
+		else
+		{
+			pieces[i].obj.ModulateMaterials(1,1,1,1);
+			pieces[i].obj.ForceMaterial();
+		}
+		*/
+
+		/*
+		if(pieces_dropping[i])
+		{
+			var  drop_step = 100;
+			var dist = pieces[i].obj.GetPosition();
+
+
+
+			if(dist[1] != 0)
+			{
+				var decr;
+				if(0.1 < dist[1])
+					decr = dist[1]/drop_step;
+				else
+					decr = dist[1];
+
+				pieces[i].obj.SetPosition(dist[0] - dist[0]%4, dist[1] - decr, dist[2]- dist[2]%4);
+			}
+			else
+				pieces_dropping[i] = false;
+		}
+		*/
+	//}
+
+	if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
+	{
+		mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
+		mov_moving = true;
+		OutputLN("Star Moving: ", mov_offset, mov_piece);
+	}
+	else if (!mov_gripping || !mov_touching) //stop moving piece
+	{
+		if(mov_moving) //If previous moving, add to dropping pieces
+		{
+			cb.DropToNewPosition(mov_piece);
+		}
+		mov_moving = false;
+		mov_piece = -1;
+	}
+	else if(mov_moving)
+	{
+		cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
+	}
+
+	/*
+	if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
+	{
+		mov_offset = f0.GetPosition() - pieces[mov_piece].obj.GetPosition();
+		mov_moving = true;
+		pieces[mov_piece].obj.ModulateMaterials(1,1,1,0.7);
+	}
+	else if (!mov_gripping || !mov_touching) //stop moving piece
+	{
+		if(mov_moving) //If previous moving, add to dropping pieces
+		{
+			//dropping = true;
+			pieces_dropping[mov_piece] = true;
+			//aadd(dropping_ids, mov_piece);
+			//OutputLN(dropping_ids);
+		}
+		mov_moving = false;
+		mov_piece = -1;
+	}
+	else if(mov_moving)
+	{
+		pieces[mov_piece].obj.SetPosition(f0.GetPosition() - mov_offset);
+	}
+	*/
+
+	/* manage camera */
+	CameraMoveMouse();
+	//OutputLN(CameraGetPosition());
+	//OutputLN(CameraGetRotationMatrix());
+	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
+
+	//sm
+	RenderOnTexture();
+	CameraActivate(SCENE_CAMERA);
+
+
+	/*Drawing Scene */
+	SceneBegin();
+
+	//DrawGrid([0.5, 0.5, 0.5], 32);
+
+	if(mov_moving)
+		DrawGroundLine(3, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5]);
+	else
+		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9]);
+
+	//TODO:remove me
+	//foreach(var p in pieces)
+	//	DrawGroundLine(2, p.GetPosition(), [0.5, 0.9, 0.5]);
+
+	// TODO: put your drawing code here
+
+	palm.Draw();
+
+	FillTextureMatrix();
+
+	//glCullFace(GL_FRONT);
+	glMatrixMode(GL_MODELVIEW);
+	//glCullFace(GL_BACK);
+
+	shader.Start();
+		SetActiveTexture(fbo);
+		shader.SetParameter("shadowMap", 0);
+
+		cb.DrawPieces();
+		//for(var i = 0; i < 16; i++)
+		//	pieces[i].Draw();
+
+		f0.Draw();
+		f1.Draw();
+
+		o_table.Draw();
+		o_chessboard.Draw();
+
+		shader.Stop();
+	SceneEnd();
+}
+
+
+
+function DownloadReady(RequestID)
+{
+	// TODO
+}
+
+
+
+function OnTimer()
+{
+	// TODO:
+}
+
+
+function OnEvent(eventID, wparam, lparam){
+	// TODO: put your events handling code here
+}
+
+function OnError(){
+	// TODO: put your errors handling code here
+}
+
+
+function OnExit()
+{
+	// TODO: put your cleanup code here
+}
+
+
+
+// Camera manager (using mouse)
+function CameraMoveMouse()
+{
+
+	CameraMoveMouse_Target();
+
+}
+
+function DrawGroundLine(size, pos, color)
+{
+	/* let's not mess up current OpenGL status */
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+
+	glLineWidth(1);
+	glDisable(GL_LIGHTING);
+	glColor(color);
+	var max = pos[1];
+	var min = 0;
+	var c = size / 2;
+
+	glBegin(GL_LINES);
+	glVertex(pos[0] + c, max, pos[2] + c);
+	glVertex(pos[0] + c, min, pos[2] + c);
+	glEnd();
+
+	/* polite restoration of previous OpenGL status */
+	glPopAttrib();
+}
+
+function DrawGrid(col, size)
+{
+	/* let's not mess up current OpenGL status */
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+
+	glLineWidth(1);
+	glDisable(GL_LIGHTING);
+	glColor(col);
+	var max = size / 2.0;
+	var min = -max;
+	var step = size / 8.0;
+
+	glBegin(GL_LINES);
+		for (var i = min; i <= max; i += step)
+		{
+			glVertex(i, 0, max);
+			glVertex(i, 0, min);
+
+			glVertex(max, 0, i);
+			glVertex(min, 0, i);
+		}
+	glEnd();
+
+	/* polite restoration of previous OpenGL status */
+	glPopAttrib();
+}
+
+
+/*shadow mapping functions*/
+function show_fbo()
+{
+	glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT);
+
+	glDisable(GL_LIGHTING);
+	glColor(1.0, 1.0, 1.0, 1.0);
+
+	SetActiveTexture(fbo);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glTranslate(-1.5, -1.5, -2.5);
+	//glScale(0.5, 0.5, 1.0);
+
+	glBegin(GL_QUADS);
+		glTexCoord(0.0, 0.0);
+		glVertex(0.0, 0.0, 0.0);
+
+		glTexCoord(1.0, 0.0);
+		glVertex(1.0, 0.0, 0.0);
+
+		glTexCoord(1.0, 1.0);
+		glVertex(1.0, 1.0, 0.0);
+
+		glTexCoord(0.0, 1.0);
+		glVertex(0.0, 1.0, 0.0);
+	glEnd();
+
+	glPopMatrix();
+
+	glPopAttrib();
+}
+
+// light projection and modelview matrices
+var light_mat_proj;
+var light_mat_modelview;
+
+function RenderOnTexture()
+{
+	CameraActivate(LIGHT_CAMERA);
+
+	/*
+	 * First of all, you have to notify your intention
+	 * to draw on the offscreen framebuffer you have created
+	 * (that is, render to texture)
+	 */
+	fbo.Start();
+
+	/*
+	 * Then, you start drawing as usual in XVR
+	 */
+	SceneBegin();
+		/*
+		 * Retrieve the modelview and projection matrix of the light
+		 * and save them; of course if the light is fixed, this is
+		 * needed only once
+		 */
+		light_mat_proj      = glGet(GL_PROJECTION_MATRIX);
+		light_mat_modelview = glGet(GL_MODELVIEW_MATRIX);
+
+		/*
+		 * Polygon offset is needed in order to avoid artifacts in the
+		 * final image due to low precision of depth buffer values
+		 */
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(2, 2);
+			/*
+			 * Here, draw all the objects that should CAST shadows
+			 */
+			 f0.Draw(VR_NO_TEXTURE);
+			 f1.Draw(VR_NO_TEXTURE);
+			 o_chessboard.Draw(VR_NO_TEXTURE);
+
+			cb.DrawPieces(VR_NO_TEXTURE);
+			//for(var i = 0; i < 16; i++)
+			//	pieces[i].Draw(VR_NO_TEXTURE);
+
+
+		glDisable(GL_POLYGON_OFFSET_FILL);
+
+	SceneEnd();
+
+	/*
+	 * Tell XVR that you are done with the offscreen framebuffer
+	 * and that subsequent draw operations should occur on the screen
+	 */
+	fbo.Stop();
+}
+
+function FillTextureMatrix()
+{
+	glMatrixMode (GL_TEXTURE);
+
+	/*
+	 * First of all, we have to clamp the values in the [0.0,1.0] range
+	 * instead of the [-1.0,1.0] we obtain from the view matrices
+	 */
+	glLoadIdentity();
+	glTranslate(0.5, 0.5, 0.5);
+	glScale(0.5, 0.5, 0.5);
+
+	/*
+	 * Next, multiply by the previously retrieved light matrices
+	 */
+	glMultMatrix(light_mat_proj);
+	glMultMatrix(light_mat_modelview);
+
+	/*
+	 * Finally, we multiply by the inverse of the *current* modelview matrix
+	 * This is needed because it is already included in each vertex own modelview
+	 */
+	var s_mat_m = glGet(GL_MODELVIEW_MATRIX);
+
+	/*
+	 * This matrix should always be invertible, but still...
+	 */
+	//if (! InvertMatrix(&s_mat_m))
+		//Quit("Singular view matrix!");
+
+	s_mat_m = MatrixInverse_4(s_mat_m);
+	glMultMatrix(s_mat_m);
+}

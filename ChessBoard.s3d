@@ -1,0 +1,205 @@
+#ifndef _CHESSBOARD
+#define _CHESSBOARD
+
+#include "ChessPiece.s3d"
+
+class ChessBoard
+{
+    var wPieces;
+    var bPieces;
+
+    var wMaterial;
+    var bMaterial;
+
+    var corner;
+    var dimension;
+
+    var matrix;
+
+    var isDropping;
+
+    Init();
+    DrawPieces(flag);
+    FindTouched(finger);
+    DropPieces();
+    GetPiecePosition(id);
+    GetPieceFrom32id(id);
+    DropToNewPosition(mov_piece);
+    FreeMovePiece(id, pos);
+    GetPosFromXY(p);
+};
+
+function ChessBoard::ChessBoard(c, d, wm, bm)
+{
+    wPieces = Array(16);
+    bPieces = Array(16);
+    wMaterial = wm;
+    bMaterial = bm;
+
+    corner = c;
+    dimension = d;
+
+    matrix = Array(64);
+
+    isDropping = Array(32);
+}
+/*
+—— a  b  c  d  e  f  g  h
+8 ║♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜
+7 ║♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟
+6 ║… … … … … … … … … … …
+5 ║… … … … … … … … … … …
+4 ║… … … … … … … … … … …
+3 ║… … … … … … … … … … …
+2 ║♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙
+1 ║♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖
+—— a  b  c  d  e  f  g  h
+*/
+function ChessBoard::Init()
+{
+    var letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
+
+    wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
+	wPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, wMaterial);
+	wPieces[2] = ChessPiece(CP_HORSE, AHto64("B", 1), CP_W, wMaterial, false);
+	wPieces[3] = ChessPiece(CP_HORSE, AHto64("G", 1), CP_W, wMaterial, true);
+	wPieces[4] = ChessPiece(CP_BISHOP, AHto64("C", 1), CP_W, wMaterial);
+	wPieces[5] = ChessPiece(CP_BISHOP, AHto64("F", 1), CP_W, wMaterial);
+	wPieces[6] = ChessPiece(CP_QUEEN, AHto64("D", 1), CP_W, wMaterial);
+	wPieces[7] = ChessPiece(CP_KING, AHto64("E", 1), CP_W, wMaterial);
+
+    for(var i = 0; i < 8; i++)
+        wPieces[i+8] = ChessPiece(CP_PAWN, AHto64(letters[i], 2), CP_W, wMaterial);
+
+    bPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 8), CP_B, bMaterial);
+	bPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 8), CP_B, bMaterial);
+	bPieces[2] = ChessPiece(CP_HORSE, AHto64("B", 8), CP_B, bMaterial, false);
+	bPieces[3] = ChessPiece(CP_HORSE, AHto64("G", 8), CP_B, bMaterial, true);
+	bPieces[4] = ChessPiece(CP_BISHOP, AHto64("C", 8), CP_B, bMaterial);
+	bPieces[5] = ChessPiece(CP_BISHOP, AHto64("F", 8), CP_B, bMaterial);
+	bPieces[6] = ChessPiece(CP_QUEEN, AHto64("D", 8), CP_B, bMaterial);
+	bPieces[7] = ChessPiece(CP_KING, AHto64("E", 8), CP_B, bMaterial);
+
+    for(var i = 0; i < 8; i++)
+        bPieces[i+8] = ChessPiece(CP_PAWN, AHto64(letters[i], 7), CP_B, bMaterial);
+
+    for(var i=0; i<16; i++)
+        {
+            wPieces[i].SetXYPos(corner, dimension);
+            isDropping[i] = false;
+
+            bPieces[i].SetXYPos(corner, dimension);
+            isDropping[i+16] = false;
+        }
+}
+
+function ChessBoard::DrawPieces(flag)
+{
+    for(var i = 0; i<16; i++)
+    {
+        wPieces[i].Draw(flag);
+        bPieces[i].Draw(flag);
+    }
+}
+
+function ChessBoard::FindTouched(finger)
+{
+    for(var i=0; i<16; i++)
+    {
+        if(wPieces[i].obj.IsCollidingBBox(finger))
+            return i;
+
+        if(bPieces[i].obj.IsCollidingBBox(finger))
+            return i+16;
+    }
+    return -1;
+}
+
+function ChessBoard::DropPieces()
+{
+    for(var i = 0; i<32; i++)
+    {
+        var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
+        if(isDropping[i])
+        {
+            var  drop_step = 100;
+			var pos = p.obj.GetPosition();
+            var cbStep = dimension/8;
+
+            var distX = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
+            var distY = pos[1];
+            var distZ = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
+
+            var decrX = 0.0;
+            var decrY = 0.0;
+            var decrZ = 0.0;
+
+            ///*
+            if(distX != 0)
+            {
+                if(0.1 < distX)
+					decrX = distX/drop_step;
+				else
+					decrX = distX;
+            }
+            if(distZ != 0)
+            {
+                if(0.1 < distZ)
+					decrZ = distZ/drop_step;
+				else
+					decrZ = distZ;
+            }
+            //*/
+
+            if(distY > 0)
+			{
+				if(0.1 < distY)
+					decrY = distY/drop_step;
+				else
+					decrY = distY;
+			}
+			else
+                isDropping[i] = false;
+
+            p.obj.SetPosition(pos[0] - decrX, pos[1] - decrY, pos[2] - decrZ);
+        }
+    }
+}
+
+function ChessBoard::DropToNewPosition(id)
+{
+    isDropping[id] = true;
+
+    var p = GetPieceFrom32id(id);
+    OutputLN(p.position);
+    var newPos = GetPosFromXY(p.obj.GetPosition());
+    p.position = newPos;
+    OutputLN(p.position);
+}
+
+function ChessBoard::GetPiecePosition(id)
+{
+    var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
+    return p.obj.GetPosition();
+}
+
+function ChessBoard::FreeMovePiece(id, pos)
+{
+    var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
+    p.obj.SetPosition(pos);
+}
+
+function ChessBoard::GetPieceFrom32id(id)
+{
+    return id < 16 ? wPieces[id] : bPieces[id - 16];
+}
+
+function ChessBoard::GetPosFromXY(p)
+{
+    var cbStep = dimension/8;
+    var x = Int((p[0]+16) / cbStep);
+    var z = Int((p[2]+16) / cbStep);
+
+    return x*8 + z;
+}
+#endif

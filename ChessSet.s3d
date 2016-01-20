@@ -1,0 +1,217 @@
+#ifndef _CHESSSET
+#define _CHESSSET
+
+/*Procedural generated pieces*/
+function createPawn(mat)
+{
+    var num_seg = 0;
+    var min_corner = [0, 0, 0];
+    var max_corner = [2, 2, 2];
+    var mesh = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh.SetMaterial(mat);
+    var result = CVmObj(mesh);
+
+    return result;
+}
+
+function createTower(mat)
+{
+    var num_seg = 0;
+    var min_corner = [0, 0, 0];
+    var max_corner = [3, 3, 3];
+    var mesh = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh.SetMaterial(mat);
+    var result = CVmObj(mesh);
+
+    return result;
+}
+
+function createHorse(mirror, mat)
+{
+    var num_seg = 0;
+    var min_corner = [0, 1.5, 0];
+    var max_corner = [1.5, 3, 3];
+    var mesh1 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh1.SetMaterial(mat);
+    var box1 = CVmObj(mesh1);
+
+    min_corner = [1.5, 0, 0];
+    max_corner = [3, 1.5, 3];
+    var mesh2 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh2.SetMaterial(mat);
+    var box2 = CVmObj(mesh2);
+
+    if(mirror)
+    {
+        min_corner = [0, 0, 1.5];
+        max_corner = [1.5, 1.5, 3];
+    }
+    else
+    {
+        min_corner = [0, 0, 0];
+        max_corner = [1.5, 1.5, 1.5];
+    }
+    var mesh3 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh3.SetMaterial(mat);
+    var box3 = CVmObj(mesh3);
+
+    if(mirror)
+    {
+        min_corner = [1.5, 1.5, 0];
+        max_corner = [3, 3, 1.5];
+    }
+    else
+    {
+        min_corner = [1.5, 1.5, 1.5];
+        max_corner = [3, 3, 3];
+    }
+    var mesh4 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh4.SetMaterial(mat);
+    var box4 = CVmObj(mesh4);
+
+    var bbox = CVmNewMesh(VRP_BOX, 0, [0,0,0], [3,3,3]);
+    bbox.HideAll();
+    var result = CVmObj(bbox);
+
+    result.AddChild(box1, 0, 0, 0);
+    result.AddChild(box2, 0, 0, 0);
+    result.AddChild(box3, 0, 0, 0);
+    result.AddChild(box4, 0, 0, 0);
+
+    return result;
+}
+
+function createBishop(mat)
+{
+    //var cont = [0,0, 0.5,0, 1.5,1.10, 2.5,0, 3,0, 3,0.5, 1.90,1.5, 3,2.5, 3,3, 2.5,3, 1.5,1.90, 0.5,3, 0,3, 0,2.5, 1.10,1.5, 0,0.5];
+    var cont = [0,0, 0.55,0, 1.5,0.975, 2.55,0, 3,0, 3,0.55, 2.025,1.5, 3,2.45, 3,3, 2.45,3, 1.5,2.025, 0.55,3, 0,3, 0,2.45, 0.975,1.5, 0,0.55];
+    //cont = [0,0, 3,0, 3,3, 0,3];
+    var mesh = CVmNewMesh(VRP_EXTRUSION, 16, cont, 3, true);
+    mesh.SetMaterial(mat);
+    var result = CVmObj(mesh);
+
+    return result;
+}
+
+function createQueen(mat)
+{
+    /*
+    var num_seg = 30;
+    var radius = 1.5;
+    var height = 5;
+    var cone = CVmObj(CVmNewMesh(VRP_CONE, num_seg, radius, height, 1));
+    */
+    var num_seg = 0;
+    var min_corner = [0, 0, 0];
+    var max_corner = [2, 2, 2];
+    var mesh1 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh1.SetMaterial(mat);
+    var box = CVmObj(mesh1);
+
+    var mesh2 = CVmNewMesh(VRP_SPHERE , 20, 1, 1);
+    mesh2.SetMaterial(mat);
+    var sphere = CVmObj(mesh2);
+
+
+    var bbox = CVmNewMesh(VRP_BOX, 0, [0,0,0], [2,5,2]);
+    bbox.HideAll();
+    var result = CVmObj(bbox);
+
+    //result.AddChild(cone, 1.5, 0, 1.5);
+    result.AddChild(box, 0, 0, 0);
+    //result.AddChild(sphere, 1.5, 3, 1.5);
+    result.AddChild(sphere, 1, 2.7, 1);
+
+    return result;
+}
+
+function createKing(mat)
+{
+    /*
+    var num_seg = 30;
+    var radius = 1.5;
+    var height = 5;
+    var cone = CVmObj(CVmNewMesh(VRP_CONE, num_seg, radius, height, 1));
+*/
+    var num_seg = 0;
+    var min_corner = [0, 0, 0];
+    var max_corner = [2, 2, 2];
+    var mesh1 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh1.SetMaterial(mat);
+    var box = CVmObj(mesh1);
+
+    min_corner = [0, 0, 0];
+    max_corner = [1.4, 1.4, 1.4];
+    var mesh2 = CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner);
+    mesh2.SetMaterial(mat);
+    var box2 = CVmObj(mesh2);
+
+    box2.SetPivotPoint(0.5, 0.5, 0.5);
+    box2.SetRotation(45, 0, 1, 0);
+
+    var bbox = CVmNewMesh(VRP_BOX, num_seg, [0,0,0], [2,5,2]);
+    bbox.HideAll();
+    var result = CVmObj(bbox);
+
+    result.AddChild(box, 0, 0, 0);
+    result.AddChild(box2, 0.2, 2, 0.5);
+    //result.AddChild(cone, 1.5, 0, 1.5);
+    //result.AddChild(box, 0.5, 3, 0.5);
+    return result;
+}
+
+/*Load pieces from file */
+var m_bishop;
+function getBishop(mat)
+{
+    if(m_bishop == null)
+    {
+        m_bishop = CVMNewMesh("bishop.aam");
+    	m_bishop.CenterBoundingBox();
+    }
+    var result = CVmObj(m_bishop);
+    result.ForceMaterial(mat);
+    return result;
+}
+
+var m_horse;
+function getHorse(mat)
+{
+    if(m_horse == null)
+    {
+        m_horse = CVMNewMesh("horse.aam");
+    	m_horse.CenterBoundingBox();
+    }
+    var result = CVmObj(m_horse);
+    result.ForceMaterial(mat);
+    return result;
+}
+
+
+var m_king;
+function getKing(mat)
+{
+    if(m_king == null)
+    {
+        m_king = CVMNewMesh("king.aam");
+    	m_king.CenterBoundingBox();
+    }
+    var result = CVmObj(m_king);
+    result.ForceMaterial(mat);
+    return result;
+}
+
+var m_queen;
+function getQueen(may)
+{
+    if(m_queen == null)
+    {
+        m_queen = CVMNewMesh("queen.aam");
+    	m_queen.CenterBoundingBox();
+    }
+    var result = CVmObj(m_queen);
+    //result.ForceMaterial(mat);
+    return result;
+}
+
+#endif

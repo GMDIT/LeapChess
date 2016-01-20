@@ -1,0 +1,122 @@
+#ifndef _CHESSPIECE
+#define _CHESSPIECE
+
+#define CP_PAWN 0
+#define CP_TOWER 1
+#define CP_HORSE 2
+#define CP_BISHOP 3
+#define CP_QUEEN 4
+#define CP_KING 5
+#define CP_W 0
+#define CP_B 1
+
+#include "ChessSet.s3d"
+
+function AHto64(c, i)
+{
+    var v;
+    switch (c)
+    {
+        case "A":
+            v = 0;
+            break;
+        case "B":
+            v = 1;
+            break;
+        case "C":
+            v = 2;
+            break;
+        case "D":
+            v = 3;
+            break;
+        case "E":
+            v = 4;
+            break;
+        case "F":
+            v = 5;
+            break;
+        case "G":
+            v = 6;
+            break;
+        case "H":
+            v =7;
+            break;
+    }
+    return (i-1)* 8 + v;
+}
+
+class ChessPiece
+{
+    var type;
+    var position;
+    var color;
+    var obj;
+
+    var myDim;
+
+    Draw(flag);
+    SetXYPos(c, d);
+    GetOffSet(d);
+};
+
+function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
+{
+    type = t;
+    position = pos;
+    color = c;
+
+    switch (t) {
+        case CP_PAWN:
+            obj = createPawn(mat);
+            myDim = 2;
+            break;
+        case CP_TOWER:
+            obj = createTower(mat);
+            myDim = 3.0;
+            break;
+        case CP_HORSE:
+            obj = createHorse(mirror, mat);
+            myDim = 3.0;
+            break;
+        case CP_BISHOP:
+            obj = createBishop(mat);
+            myDim = 3.0;
+            break;
+        case CP_QUEEN:
+            obj = createQueen(mat);
+            myDim = 2;
+            break;
+        case CP_KING:
+            obj = createKing(mat);
+            myDim = 2;
+            break;
+    }
+}
+
+function ChessPiece::Draw(flag)
+{
+    if(flag == NULL)
+        obj.Draw();
+    else
+        obj.Draw(flag);
+}
+
+function ChessPiece::SetXYPos(c, d)
+{
+    var step = d/8;
+    var offset = (step - myDim) / 2;
+    var posX = Int(position / 8) * step + offset + c[0];
+    var posY = c[1];
+    var posZ = (position % 8) * step + offset + c[2];
+    obj.SetPosition(posX, posY, posZ);
+}
+
+function ChessPiece::GetOffSet(d)
+{
+    var step = d/8;
+    var offset = (step - myDim) / 2;
+
+    return offset;
+}
+
+#endif
