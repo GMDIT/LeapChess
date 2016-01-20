@@ -29,6 +29,7 @@ class ChessBoard
     FreeMovePiece(id, pos);
     GetPosFromXY(p);
     IsValidDropPosition(id);
+    EatPieceIn(pos);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -96,11 +97,11 @@ function ChessBoard::Init()
         {
             wPieces[i].SetXYPos(corner, dimension);
             isDropping[i] = false;
-            cbMatrix[wPieces[i].position] = CP_W;
+            cbMatrix[wPieces[i].position] = wPieces[i];
 
             bPieces[i].SetXYPos(corner, dimension);
             isDropping[i+16] = false;
-            cbMatrix[bPieces[i].position] = CP_B;
+            cbMatrix[bPieces[i].position] = bPieces[i];
             //OutputLN(cbMatrix[32] == Void);
         }
 }
@@ -182,7 +183,7 @@ function ChessBoard::IsValidDropPosition(p)
 {
     //var p = GetPieceFrom32id(id);
     var newPos = GetPosFromXY(p.obj.GetPosition());
-    if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos] != p.type)
+    if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos].color != p.color)
         return true;
     else
         return false;
@@ -202,10 +203,18 @@ function ChessBoard::DropToNewPosition(id)
         isDropping[id] = true;
         p.position = newPos;
         OutputLN(p.position);
-        cbMatrix[newPos] = p.type;
+        if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
+            EatPieceIn(newPos);
+        cbMatrix[newPos] = p;
         return true;
     }
 
+}
+
+function ChessBoard::EatPieceIn(pos)
+{
+    var p = cbMatrix[pos];
+    p.obj.SetPosition([0, 5, -20]);
 }
 
 function ChessBoard::GetPiecePosition(id)
