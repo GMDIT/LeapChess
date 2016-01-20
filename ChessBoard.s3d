@@ -10,11 +10,12 @@ class ChessBoard
 
     var wMaterial;
     var bMaterial;
+    var xMaterial;
 
     var corner;
     var dimension;
 
-    var matrix;
+    var cbMatrix;
 
     var isDropping;
 
@@ -27,6 +28,7 @@ class ChessBoard
     DropToNewPosition(mov_piece);
     FreeMovePiece(id, pos);
     GetPosFromXY(p);
+    IsValidDropPosition(id);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -36,10 +38,17 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
     wMaterial = wm;
     bMaterial = bm;
 
+    xMaterial = CVmMaterial();
+	xMaterial.ambient   = [0.5, 0.5, 0.5, 1.0]; //red
+	xMaterial.diffuse   = [1, 0.1, 0.1, 1.0];
+	xMaterial.specular  = [0.1, 0.1, 0.1, 0.5];
+	//xMaterial.emission = [0.5, 0.1, 0.1];
+	xMaterial.shininess = 0;
+
     corner = c;
     dimension = d;
 
-    matrix = Array(64);
+    cbMatrix = Array(64);
 
     isDropping = Array(32);
 }
@@ -87,9 +96,12 @@ function ChessBoard::Init()
         {
             wPieces[i].SetXYPos(corner, dimension);
             isDropping[i] = false;
+            cbMatrix[wPieces[i].position] = CP_W;
 
             bPieces[i].SetXYPos(corner, dimension);
             isDropping[i+16] = false;
+            cbMatrix[bPieces[i].position] = CP_B;
+            //OutputLN(cbMatrix[32] == Void);
         }
 }
 
@@ -166,15 +178,34 @@ function ChessBoard::DropPieces()
     }
 }
 
+function ChessBoard::IsValidDropPosition(p)
+{
+    //var p = GetPieceFrom32id(id);
+    var newPos = GetPosFromXY(p.obj.GetPosition());
+    if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos] != p.type)
+        return true;
+    else
+        return false;
+}
+
 function ChessBoard::DropToNewPosition(id)
 {
-    isDropping[id] = true;
-
     var p = GetPieceFrom32id(id);
+    cbMatrix[p.position] = Void;
     OutputLN(p.position);
     var newPos = GetPosFromXY(p.obj.GetPosition());
-    p.position = newPos;
-    OutputLN(p.position);
+
+    if(!IsValidDropPosition(p))
+        return false;
+    else
+    {
+        isDropping[id] = true;
+        p.position = newPos;
+        OutputLN(p.position);
+        cbMatrix[newPos] = p.type;
+        return true;
+    }
+
 }
 
 function ChessBoard::GetPiecePosition(id)
@@ -187,6 +218,10 @@ function ChessBoard::FreeMovePiece(id, pos)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
     p.obj.SetPosition(pos);
+    if(IsValidDropPosition(p))
+        p.obj.ForceMaterial();
+    else
+        p.obj.ForceMaterial(xMaterial);
 }
 
 function ChessBoard::GetPieceFrom32id(id)

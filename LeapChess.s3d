@@ -46,6 +46,7 @@ var reduction_factor = 10;
 /*Colors & mat */
 var m_white;
 var m_black;
+var m_red;
 var c_white = [1, 1, 1];
 var c_red = [1, 0, 0];
 var c_blue =[0, 0, 1];
@@ -200,7 +201,14 @@ function OnInit(params)
 	m_black.specular  = [0.2, 0.1, 0.1, 0.5];
 	//m_black.emission = [1.0, 1.0, 0, 1];
 	m_black.shininess = 128;
-	m_black.transparency = 0.5;
+	//m_black.transparency = 0.5;
+
+	m_red = CVmMaterial();
+	m_red.ambient   = [0.5, 0.5, 0.5, 1.0]; //red
+	m_red.diffuse   = [1, 0.1, 0.1, 1.0];
+	m_red.specular  = [0.1, 0.1, 0.1, 0.5];
+	m_red.emission = [0.5, 0.1, 0.1];
+	m_red.shininess = 0;
 
 	mat = CVmMaterial();
 	mat.ambient   = [0.0, 0.0, 0.2, 1.0]; //blue
@@ -430,12 +438,18 @@ function OnFrame()
 	}
 	else if (!mov_gripping || !mov_touching) //stop moving piece
 	{
+		var res = true;
 		if(mov_moving) //If previous moving, add to dropping pieces
 		{
-			cb.DropToNewPosition(mov_piece);
+			res = cb.DropToNewPosition(mov_piece);
 		}
-		mov_moving = false;
-		mov_piece = -1;
+		if(res)
+		{
+			mov_moving = false;
+			mov_piece = -1;
+		}
+		else
+			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
 	}
 	else if(mov_moving)
 	{
