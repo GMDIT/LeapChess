@@ -125,6 +125,7 @@ function CameraMoveMouse();
 function DrawGrid(col, size);
 
 function DrawGroundLine(size, pos, color, centered);
+function DrawLegalMoves();
 
 function RenderOnTexture();
 function FillTextureMatrix();
@@ -449,6 +450,7 @@ function OnFrame()
 		{
 			mov_moving = false;
 			mov_piece = -1;
+			legalMoves = null;
 		}
 		else
 			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
@@ -503,6 +505,9 @@ function OnFrame()
 		DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5], true);
 	else
 		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
+
+	if(legalMoves != null)
+		DrawLegalMoves();
 
 	//TODO:remove me
 	//foreach(var p in pieces)
@@ -618,6 +623,37 @@ function DrawGroundLine(size, pos, color, centered)
 	glPopAttrib();
 }
 
+function DrawLegalMoves()
+{
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+
+	glLineWidth(1);
+	glDisable(GL_LIGHTING);
+	glColor([1,1,0]);
+
+	var posX, posZ;
+
+	glBegin(GL_QUADS);
+		for (var i = 0; i < 63; i++)
+		{
+			if(legalMoves[i] != Void)
+			{
+				//TODO: parametrizzare
+				posX = Int(i/8) * 4 - 16;
+				posZ = (i%8) * 4 - 16;
+
+				glVertex(posX + 0.2, 0.4, posZ + 0.2);
+				glVertex(posX + 0.2, 0.4, posZ + 3.8);
+				glVertex(posX + 3.8, 0.4, posZ + 3.8);
+				glVertex(posX + 3.8, 0.4, posZ + 0.2);
+			}
+		}
+	glEnd();
+
+	/* polite restoration of previous OpenGL status */
+	glPopAttrib();
+}
+
 function DrawGrid(col, size)
 {
 	/* let's not mess up current OpenGL status */
@@ -646,7 +682,9 @@ function DrawGrid(col, size)
 }
 
 
-/*shadow mapping functions*/
+/****************************
+| shadow mapping functions  |
+****************************/
 function show_fbo()
 {
 	glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT);
