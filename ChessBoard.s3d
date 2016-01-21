@@ -313,7 +313,7 @@ function ChessBoard::LegalMoves(p)
 
                     //double forward
                     //se ho un pezzo nero davanti non devo poter fare il secondo passo
-                    if(startPos < 16 && CanMoveTo(color, endPos) && CalcNewPos(endPos, 2, 0, endPos))// && cbMatrix[endPos-8].color != color)
+                    if(startPos < 16 && CalcNewPos(endPos, 2, 0, &endPos) && CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
                         result[endPos] = true;
                 }
 
@@ -334,7 +334,7 @@ function ChessBoard::LegalMoves(p)
                     result[endPos] = true;
 
                     //double forward
-                    if(startPos > 47 && CanMoveTo(color, endPos) && CalcNewPos(endPos, -2, 0, endPos))
+                    if(startPos > 47  && CalcNewPos(endPos, -2, 0, &endPos) && CanMoveTo(color, endPos))
                         result[endPos] = true;
                 }
 
@@ -440,7 +440,7 @@ function ChessBoard::LegalMoves(p)
 
         case CP_KING:
             //TODO:better code... chek if the move put the King under attack
-            
+
             if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
             if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
             if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
