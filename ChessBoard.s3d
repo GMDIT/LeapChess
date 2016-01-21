@@ -152,7 +152,7 @@ function ChessBoard::DropPieces()
         var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
         if(isDropping[i])
         {
-            var  drop_step = 100;
+            var  drop_step = 75;
 			var pos = p.obj.GetPosition();
             var cbStep = dimension/8;
 
@@ -164,7 +164,6 @@ function ChessBoard::DropPieces()
             var decrY = 0.0;
             var decrZ = 0.0;
 
-            ///*
             if(distX != 0)
             {
                 if(0.1 < distX)
@@ -179,7 +178,6 @@ function ChessBoard::DropPieces()
 				else
 					decrZ = distZ;
             }
-            //*/
 
             if(distY > 0)
 			{
@@ -249,7 +247,7 @@ function ChessBoard::GetPiecePosition(id)
 function ChessBoard::FreeMovePiece(id, pos)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
-    p.obj.SetPosition(pos);
+    p.obj.SetPosition([pos[0], (pos[1]>0? pos[1]: 0), pos[2]]);
     if(IsValidDropPosition(p))
         p.obj.ForceMaterial();
     else
