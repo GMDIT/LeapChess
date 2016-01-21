@@ -2,7 +2,18 @@
 #define _CHESSBOARD
 
 #include "ChessPiece.s3d"
-
+/*
+—— a  b  c  d  e  f  g  h
+8 ║56 57 58 59 60 61 62 63
+7 ║48 49 50 51 52 53 54 55
+6 ║40 41 42 43 44 45 46 47
+5 ║32 33 34 35 36 37 38 39
+4 ║24 25 26 27 28 29 30 31
+3 ║16 17 18 19 20 21 22 23
+2 ║ 8  9 10 11 12 13 14 15
+1 ║ 0  1  2  3  4  5  6  7
+—— a  b  c  d  e  f  g  h
+*/
 class ChessBoard
 {
     var wPieces;
@@ -32,6 +43,8 @@ class ChessBoard
     GetPosFromXY(p);
     IsValidDropPosition(id);
     EatPieceIn(pos);
+    LegalMoves(piece);
+    CanMoveTo(color, dest);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -220,8 +233,8 @@ function ChessBoard::EatPieceIn(pos)
     var p = cbMatrix[pos];
     var c = p.color;
     var e = eatedCounters[c];
-    var posX = (c==CP_W ? -16 + (e*4)%8 : 16 - (e*4)%8);
-    var posZ = (c==CP_W ? -20 - (e<8?0:4) : 20 + (e<8?0:4));
+    var posX = (c==CP_W ? corner[0] + (e*4)%8 : - corner[0] - (e*4)%8);
+    var posZ = (c==CP_W ? corner[0] - 4 - (e<8?0:4) : - corner[0] + 4 + (e<8?0:4));
     p.obj.SetPosition(posX, 2, posZ);
     eatedCounters[c] = e+1;
     p.position = -1;
@@ -255,5 +268,187 @@ function ChessBoard::GetPosFromXY(p)
     var z = Int((p[2]+16) / cbStep);
 
     return x*8 + z;
+}
+
+function ChessBoard::CanMoveTo(color, dest)
+{
+    if(dest < 0 || dest > 63)
+        return false;
+
+    if(cbMatrix[dest] == Void)
+        return true;
+    else if (cbMatrix[dest].color != color)
+        return true;
+    else
+        return false;
+}
+
+function ChessBoard::LegalMoves(p)
+{
+    var startPos = p.position;
+    var endPos = startPos;
+
+    var row = Int(startPos / 8);
+    var rMin = row * 8;
+    var rMax = rMin + 8;
+
+    var type = p.type;
+    var color = p.color;
+
+    var w = (color == CP_W);
+
+    var result = Array(64);
+    result[startPos] = true;
+
+    switch (type)
+    {
+        case CP_PAWN: //TODO:en passant
+            if(w)
+            {
+                //forward
+                endPos += 8;
+                if(CanMoveTo(color, endPos))
+                    result[endPos] = true;
+
+                //double forward
+                endPos += 8;
+                if(startPos < 16 && CanMoveTo(color, endPos))
+                    result[endPos] = true;
+
+                //left eat
+                endPos = startPos + 7;
+                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                    result[endPos] = true;
+
+                //right eat
+                endPos = startPos + 9;
+                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                    result[endPos] = true;
+
+            }
+            else
+            {
+                //forward
+                endPos -= 8;
+                if(CanMoveTo(color, endPos))
+                    result[endPos] = true;
+
+                //double forward
+                endPos -= 8;
+                if(startPos > 47 && CanMoveTo(color, endPos))
+                    result[endPos] = true;
+
+                //left eat
+                endPos = startPos - 7;
+                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                    result[endPos] = true;
+
+                //right eat
+                endPos = startPos - 9;
+                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                    result[endPos] = true;
+            }
+            return result;
+            break;
+
+        case CP_HORSE:
+            //TODO:better code...
+            if(CanMoveTo(color, startPos - 6)) result[startPos - 6] = true;
+            if(CanMoveTo(color, startPos - 10)) result[startPos - 10] = true;
+            if(CanMoveTo(color, startPos - 15)) result[startPos - 15] = true;
+            if(CanMoveTo(color, startPos - 17)) result[startPos - 17] = true;
+            if(CanMoveTo(color, startPos + 6)) result[startPos + 6] = true;
+            if(CanMoveTo(color, startPos + 10)) result[startPos + 10] = true;
+            if(CanMoveTo(color, startPos + 15)) result[startPos + 15] = true;
+            if(CanMoveTo(color, startPos + 17)) result[startPos + 17] = true;
+            return result;
+            break;
+
+        case CP_BISHOP:
+        //same as first half of queen, drop down
+        case CP_QUEEN:
+            //top left
+            for(var i = startPos; CanMoveTo(color, i); i += 7)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //top right
+            for(var i = startPos; CanMoveTo(color, i); i += 9)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //bottom left
+            for(var i = startPos; CanMoveTo(color, i); i -= 9)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //bottom right
+            for(var i = startPos; CanMoveTo(color, i); i -= 7)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+        //don't break or return, we fall down for the others movements shared with rook
+        if(type == CP_BISHOP)
+            return result;
+        case CP_TOWER:
+            //left
+            for(var i = startPos; i >= rMin && CanMoveTo(color, i); i--)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //right
+            for(var i = startPos; i <= rMax && CanMoveTo(color, i); i++)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //up
+            for(var i = startPos; CanMoveTo(color, i); i += 8)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            //down
+            for(var i = startPos; CanMoveTo(color, i); i -= 8)
+            {
+                result[i] = true;
+                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                    break;//stop at first enemy
+            }
+
+            return result;
+            break;
+
+        case CP_KING:
+            //TODO:better code...
+            if(CanMoveTo(color, startPos - 1)) result[startPos - 1] = true;
+            if(CanMoveTo(color, startPos - 7)) result[startPos - 7] = true;
+            if(CanMoveTo(color, startPos - 8)) result[startPos - 8] = true;
+            if(CanMoveTo(color, startPos - 9)) result[startPos - 9] = true;
+            if(CanMoveTo(color, startPos + 1)) result[startPos + 1] = true;
+            if(CanMoveTo(color, startPos + 7)) result[startPos + 7] = true;
+            if(CanMoveTo(color, startPos + 8)) result[startPos + 8] = true;
+            if(CanMoveTo(color, startPos + 9)) result[startPos + 9] = true;
+            return result;
+            break;
+    }
 }
 #endif

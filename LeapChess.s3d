@@ -46,7 +46,7 @@ var reduction_factor = 10;
 /*Colors & mat */
 var m_white;
 var m_black;
-var m_red;
+var m_hl;
 var c_white = [1, 1, 1];
 var c_red = [1, 0, 0];
 var c_blue =[0, 0, 1];
@@ -67,6 +67,7 @@ var mat;
 //var pieces_pos = Array(16);
 //var pieces_dropping = Array(16);
 var cb;
+var legalMoves = null;
 
 var m_chessboard;
 var o_chessboard;
@@ -203,12 +204,12 @@ function OnInit(params)
 	m_black.shininess = 128;
 	//m_black.transparency = 0.5;
 
-	m_red = CVmMaterial();
-	m_red.ambient   = [0.5, 0.5, 0.5, 1.0]; //red
-	m_red.diffuse   = [1, 0.1, 0.1, 1.0];
-	m_red.specular  = [0.1, 0.1, 0.1, 0.5];
-	m_red.emission = [0.5, 0.1, 0.1];
-	m_red.shininess = 0;
+	m_hl = CVmMaterial();
+	m_hl.ambient   = [0.5, 0.5, 0.5, 1.0]; //yellow
+	m_hl.diffuse   = [1, 1, 0.1, 1.0];
+	m_hl.specular  = [0.1, 0.1, 0.1, 0.5];
+	m_hl.emission = [0.5, 0.5, 0.5];
+	m_hl.shininess = 0;
 
 	mat = CVmMaterial();
 	mat.ambient   = [0.0, 0.0, 0.2, 1.0]; //blue
@@ -435,6 +436,7 @@ function OnFrame()
 		mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
 		mov_moving = true;
 		OutputLN("Star Moving: ", mov_offset, mov_piece);
+		legalMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
 	}
 	else if (!mov_gripping || !mov_touching) //stop moving piece
 	{
