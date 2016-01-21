@@ -45,6 +45,8 @@ class ChessBoard
     EatPieceIn(pos);
     LegalMoves(piece);
     CanMoveTo(color, dest);
+
+    CalcNewPos(pos, r, c,  result);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -247,6 +249,7 @@ function ChessBoard::GetPiecePosition(id)
 function ChessBoard::FreeMovePiece(id, pos)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
+    //TODO: fix, if I move a piece below the board...
     p.obj.SetPosition([pos[0], (pos[1]>0? pos[1]: 0), pos[2]]);
     if(IsValidDropPosition(p))
         p.obj.ForceMaterial();
@@ -304,46 +307,43 @@ function ChessBoard::LegalMoves(p)
             if(w)
             {
                 //forward
-                endPos += 8;
-                if(CanMoveTo(color, endPos))
+                if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos))
+                {
                     result[endPos] = true;
 
-                //double forward
-                endPos += 8;
-                if(startPos < 16 && CanMoveTo(color, endPos))
-                    result[endPos] = true;
+                    //double forward
+                    //se ho un pezzo nero davanti non devo poter fare il secondo passo
+                    if(startPos < 16 && CanMoveTo(color, endPos) && CalcNewPos(endPos, 2, 0, endPos))// && cbMatrix[endPos-8].color != color)
+                        result[endPos] = true;
+                }
 
                 //left eat
-                endPos = startPos + 7;
-                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
                     result[endPos] = true;
 
                 //right eat
-                endPos = startPos + 9;
-                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
                     result[endPos] = true;
 
             }
             else
             {
                 //forward
-                endPos -= 8;
-                if(CanMoveTo(color, endPos))
+                if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos))
+                {
                     result[endPos] = true;
 
-                //double forward
-                endPos -= 8;
-                if(startPos > 47 && CanMoveTo(color, endPos))
-                    result[endPos] = true;
+                    //double forward
+                    if(startPos > 47 && CanMoveTo(color, endPos) && CalcNewPos(endPos, -2, 0, endPos))
+                        result[endPos] = true;
+                }
 
                 //left eat
-                endPos = startPos - 7;
-                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
                     result[endPos] = true;
 
                 //right eat
-                endPos = startPos - 9;
-                if(CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
                     result[endPos] = true;
             }
             return result;
@@ -351,14 +351,14 @@ function ChessBoard::LegalMoves(p)
 
         case CP_HORSE:
             //TODO:better code...
-            if(CanMoveTo(color, startPos - 6)) result[startPos - 6] = true;
-            if(CanMoveTo(color, startPos - 10)) result[startPos - 10] = true;
-            if(CanMoveTo(color, startPos - 15)) result[startPos - 15] = true;
-            if(CanMoveTo(color, startPos - 17)) result[startPos - 17] = true;
-            if(CanMoveTo(color, startPos + 6)) result[startPos + 6] = true;
-            if(CanMoveTo(color, startPos + 10)) result[startPos + 10] = true;
-            if(CanMoveTo(color, startPos + 15)) result[startPos + 15] = true;
-            if(CanMoveTo(color, startPos + 17)) result[startPos + 17] = true;
+            if(CalcNewPos(startPos, 1, -2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 2, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 2, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 1, 2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -1, 2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -2, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -2, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -1, -2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
             return result;
             break;
 
@@ -366,34 +366,34 @@ function ChessBoard::LegalMoves(p)
         //same as first half of queen, drop down
         case CP_QUEEN:
             //top left
-            for(var i = startPos; CanMoveTo(color, i); i += 7)
+            for(var i = 1; CalcNewPos(startPos, i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
             //top right
-            for(var i = startPos; CanMoveTo(color, i); i += 9)
+            for(var i = 1; CalcNewPos(startPos, i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
             //bottom left
-            for(var i = startPos; CanMoveTo(color, i); i -= 9)
+            for(var i = 1; CalcNewPos(startPos, -i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
             //bottom right
-            for(var i = startPos; CanMoveTo(color, i); i -= 7)
+            for(var i = 1; CalcNewPos(startPos, -i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
         //don't break or return, we fall down for the others movements shared with rook
@@ -401,52 +401,74 @@ function ChessBoard::LegalMoves(p)
             return result;
         case CP_TOWER:
             //left
-            for(var i = startPos; i >= rMin && CanMoveTo(color, i); i--)
+            for(var i = 1; CalcNewPos(startPos, 0, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
             //right
-            for(var i = startPos; i <= rMax && CanMoveTo(color, i); i++)
+            for(var i = 1; CalcNewPos(startPos, 0, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
+
 
             //up
-            for(var i = startPos; CanMoveTo(color, i); i += 8)
+            for(var i = 1; CalcNewPos(startPos, i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
+
             //down
-            for(var i = startPos; CanMoveTo(color, i); i -= 8)
+            for(var i = 1; CalcNewPos(startPos, -i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[i] = true;
-                if(cbMatrix[i] != Void && cbMatrix[i].color != color)
+                result[endPos] = true;
+                if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
+
 
             return result;
             break;
 
         case CP_KING:
-            //TODO:better code...
-            if(CanMoveTo(color, startPos - 1)) result[startPos - 1] = true;
-            if(CanMoveTo(color, startPos - 7)) result[startPos - 7] = true;
-            if(CanMoveTo(color, startPos - 8)) result[startPos - 8] = true;
-            if(CanMoveTo(color, startPos - 9)) result[startPos - 9] = true;
-            if(CanMoveTo(color, startPos + 1)) result[startPos + 1] = true;
-            if(CanMoveTo(color, startPos + 7)) result[startPos + 7] = true;
-            if(CanMoveTo(color, startPos + 8)) result[startPos + 8] = true;
-            if(CanMoveTo(color, startPos + 9)) result[startPos + 9] = true;
+            //TODO:better code... chek if the move put the King under attack
+            
+            if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 0, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, 0, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
+            if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = true;
             return result;
             break;
     }
+}
+
+//Given a position, and a increment in rows and colums, write new position
+//in result, and retur true if valid, false ow
+function ChessBoard::CalcNewPos(pos, r, c, result)
+{
+        var startRow = Int(pos/8);
+        var starCol = pos % 8;
+
+        var endRow = startRow + r;
+        var endCol = starCol  + c;
+
+        result = endRow * 8 + endCol;
+
+        if(endRow < 0 || endCol > 7 || endCol < 0 || endRow > 7)
+            return false;
+        else
+            return true;
 }
 #endif
