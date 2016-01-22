@@ -38,10 +38,10 @@ class ChessBoard
     DropPieces();
     GetPiecePosition(id);
     GetPieceFrom32id(id);
-    DropToNewPosition(mov_piece);
-    FreeMovePiece(id, pos);
+    DropToNewPosition(mov_piece, legalMoves);
+    FreeMovePiece(id, pos, legalMoves);
     GetPosFromXY(p);
-    IsValidDropPosition(id);
+    IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
     LegalMoves(piece);
     CanMoveTo(color, dest);
@@ -196,24 +196,27 @@ function ChessBoard::DropPieces()
     }
 }
 
-function ChessBoard::IsValidDropPosition(p)
+function ChessBoard::IsValidDropPosition(p, legalMoves)
 {
     //var p = GetPieceFrom32id(id);
     var newPos = GetPosFromXY(p.obj.GetPosition());
+    return legalMoves[newPos] != Void;
+/*
     if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos].color != p.color)
         return true;
     else
         return false;
+*/
 }
 
-function ChessBoard::DropToNewPosition(id)
+function ChessBoard::DropToNewPosition(id, legalMoves)
 {
     var p = GetPieceFrom32id(id);
     cbMatrix[p.position] = Void;
     OutputLN(p.position);
     var newPos = GetPosFromXY(p.obj.GetPosition());
 
-    if(!IsValidDropPosition(p))
+    if(!IsValidDropPosition(p, legalMoves))
         return false;
     else
     {
@@ -246,12 +249,12 @@ function ChessBoard::GetPiecePosition(id)
     return p.obj.GetPosition();
 }
 
-function ChessBoard::FreeMovePiece(id, pos)
+function ChessBoard::FreeMovePiece(id, pos, legalMoves)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
     //TODO: fix, if I move a piece below the board...
     p.obj.SetPosition([pos[0], (pos[1]>0? pos[1]: 0), pos[2]]);
-    if(IsValidDropPosition(p))
+    if(IsValidDropPosition(p, legalMoves))
         p.obj.ForceMaterial();
     else
         p.obj.ForceMaterial(xMaterial);

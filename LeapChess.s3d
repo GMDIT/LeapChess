@@ -444,7 +444,7 @@ function OnFrame()
 		var res = true;
 		if(mov_moving) //If previous moving, add to dropping pieces
 		{
-			res = cb.DropToNewPosition(mov_piece);
+			res = cb.DropToNewPosition(mov_piece, legalMoves);
 		}
 		if(res)
 		{
@@ -453,11 +453,11 @@ function OnFrame()
 			legalMoves = null;
 		}
 		else
-			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
+			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
 	}
 	else if(mov_moving)
 	{
-		cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
+		cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
 	}
 
 	/*
