@@ -306,13 +306,13 @@ function ChessBoard::LegalMoves(p)
             if(w)
             {
                 //forward
-                if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos))
+                if(CalcNewPos(startPos, 1, 0, &endPos) && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos)
                 {
                     result[endPos] = true;
 
                     //double forward
-                    //se ho un pezzo nero davanti non devo poter fare il secondo passo
-                    if(startPos < 16 && CalcNewPos(startPos, 2, 0, &endPos) && CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
+                    //little pawn, why are you so special?
+                    if(startPos < 16 && CalcNewPos(startPos, 2, 0, &endPos) && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
                         result[endPos] = true;
                 }
 
@@ -323,17 +323,16 @@ function ChessBoard::LegalMoves(p)
                 //right eat
                 if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
                     result[endPos] = true;
-
             }
             else
             {
                 //forward
-                if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos))
+                if(CalcNewPos(startPos, -1, 0, &endPos)  && cbMatrix[endPos] == Void)// && CanMoveTo(color, endPos))
                 {
                     result[endPos] = true;
 
                     //double forward
-                    if(startPos > 47  && CalcNewPos(startPos, -2, 0, &endPos) && CanMoveTo(color, endPos))
+                    if(startPos > 47  && CalcNewPos(startPos, -2, 0, &endPos)  && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos))
                         result[endPos] = true;
                 }
 
