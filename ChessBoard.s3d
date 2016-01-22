@@ -289,10 +289,6 @@ function ChessBoard::LegalMoves(p)
     var startPos = p.position;
     var endPos = startPos;
 
-    var row = Int(startPos / 8);
-    var rMin = row * 8;
-    var rMax = rMin + 8;
-
     var type = p.type;
     var color = p.color;
 
@@ -313,7 +309,7 @@ function ChessBoard::LegalMoves(p)
 
                     //double forward
                     //se ho un pezzo nero davanti non devo poter fare il secondo passo
-                    if(startPos < 16 && CalcNewPos(endPos, 2, 0, &endPos) && CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
+                    if(startPos < 16 && CalcNewPos(startPos, 2, 0, &endPos) && CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
                         result[endPos] = true;
                 }
 
@@ -334,7 +330,7 @@ function ChessBoard::LegalMoves(p)
                     result[endPos] = true;
 
                     //double forward
-                    if(startPos > 47  && CalcNewPos(endPos, -2, 0, &endPos) && CanMoveTo(color, endPos))
+                    if(startPos > 47  && CalcNewPos(startPos, -2, 0, &endPos) && CanMoveTo(color, endPos))
                         result[endPos] = true;
                 }
 
