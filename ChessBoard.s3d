@@ -29,6 +29,7 @@ class ChessBoard
     var eatedCounters;
 
     var cbMatrix;
+    var totalMovesCounter;
 
     var isDropping;
 
@@ -45,7 +46,7 @@ class ChessBoard
     EatPieceIn(pos);
     LegalMoves(piece);
     CanMoveTo(color, dest);
-
+    GenerateFENString(turn);
     CalcNewPos(pos, r, c,  result);
 };
 
@@ -86,6 +87,8 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
 */
 function ChessBoard::Init()
 {
+    totalMovesCounter = 1;
+
     var letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
 
     wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
@@ -468,5 +471,49 @@ function ChessBoard::CalcNewPos(pos, r, c, result)
             return false;
         else
             return true;
+}
+
+
+function ChessBoard::GenerateFENString(turn)
+{
+    var wPieceToFEN = {"P","R","N","B","Q","K"};
+    var bPieceToFEN = {"p","r","n","b","q","k"};
+    var string = "";
+    for(var rank = 7; rank >= 0; rank--)
+    {
+        for (var i = 0; i < 8 ; i++)
+        {
+            var pos = rank * 8 + i;
+            var p = cbMatrix[pos];
+
+            if(p == Void)
+                string += "1";
+            else if(p.color == CP_W)
+                string += wPieceToFEN[p.type];
+            else
+                string += bPieceToFEN[p.type];
+        }
+
+        if(rank != 0)
+            string += "/";
+    }
+    if(turn == CP_W)
+        string += " w";
+
+    //no castling;
+    string += " -";
+
+    //no en passant target square
+    string += " -";
+
+    //half move counter
+    string += " 0";
+
+    //total moves counter
+    string += Sprintf(" %d", totalMovesCounter);
+    if(turn == CP_B)
+        totalMovesCounter++;
+
+    return string;
 }
 #endif
