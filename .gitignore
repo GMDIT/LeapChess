@@ -4,3 +4,6 @@
 *.bin
 *.dbg
 *.lnk
+*.exe
+LeapChessTCPBridge/LeapChessTCPBridge/bin
+LeapChessTCPBridge/LeapChessTCPBridge/obj
