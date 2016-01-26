@@ -19,6 +19,9 @@ var res_y = 900;
 
 
 // TODO: put your global variables here
+/*ChessEngine server data */
+var ce_channel;
+var ce_data;
 
 /* LeapMotion Data */
 var lm_channel;
@@ -180,6 +183,14 @@ function OnInit(params)
 
 	// TODO: put your initialization code here
 
+	/*Connecting to Chess Engine Server*/
+	ce_channel = NetConnectTCP("localhost", 4242);
+	if(ce_channel == 0)
+		OutputLN("Error: impossible to connect to Chess Engine");
+	//NetSendToTCP(ce_channel, "Hello");
+	//ce_data = NetReceiveFromTCP(ce_channel);
+	//OutputLN(ce_data);
+
 	/*Connectin to LeapMotionServer */
 	//localhost = NetGetIP();
 	//OutputLN(localhost);
@@ -338,7 +349,6 @@ function OnInit(params)
 
 function OnFrame()
 {
-
 	//receive packet
 	//var oldDataValues = {"0", 0,0,0};
 	if(NetDataReady(lm_channel))
@@ -506,8 +516,7 @@ function OnFrame()
 	else
 		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
-	if(legalMoves != null)
-		DrawLegalMoves();
+
 
 	//TODO:remove me
 	//foreach(var p in pieces)
@@ -537,7 +546,12 @@ function OnFrame()
 		o_table.Draw();
 		o_chessboard.Draw();
 
-		shader.Stop();
+	shader.Stop();
+
+	//shoul be here, ow no alpha :-(
+	//TODO: why?
+	if(legalMoves != null)
+		DrawLegalMoves();
 	SceneEnd();
 }
 
@@ -629,10 +643,11 @@ function DrawLegalMoves()
 
 	glLineWidth(1);
 	glDisable(GL_LIGHTING);
-	glColor([1,1,0]);
+	glEnable(GL_BLEND);
+
+	glColor([0.2,1,0.2,0.9]);
 
 	var posX, posZ;
-
 	glBegin(GL_QUADS);
 		for (var i = 0; i < 63; i++)
 		{
@@ -649,7 +664,7 @@ function DrawLegalMoves()
 			}
 		}
 	glEnd();
-
+	glDisable(GL_BLEND);
 	/* polite restoration of previous OpenGL status */
 	glPopAttrib();
 }
