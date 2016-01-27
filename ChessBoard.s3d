@@ -30,8 +30,12 @@ class ChessBoard
 
     var cbMatrix;
     var totalMovesCounter;
+    var letters;
 
     var isDropping;
+
+    var turn;
+    var latestMove;
 
     Init();
     DrawPieces(flag);
@@ -42,12 +46,17 @@ class ChessBoard
     DropToNewPosition(mov_piece, legalMoves);
     FreeMovePiece(id, pos, legalMoves);
     GetPosFromXY(p);
+    //GetPosFrom64(pos);
     IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
+    MovePieceToPos(piece, pos);
     LegalMoves(piece);
     CanMoveTo(color, dest);
-    GenerateFENString(turn);
+    GenerateFENChessboard(turn);
+    GenerateMovetext(oldPos, newPos);
+    MakeMovetextMove(movetext);
     CalcNewPos(pos, r, c,  result);
+    Conv64ToAH(pos);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -67,11 +76,11 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
     corner = c;
     dimension = d;
 
-    eatedCounters = {0,0};
-
     cbMatrix = Array(64);
+    letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
 
     isDropping = Array(32);
+
 }
 /*
 —— a  b  c  d  e  f  g  h
@@ -88,8 +97,8 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
 function ChessBoard::Init()
 {
     totalMovesCounter = 1;
-
-    var letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
+    turn = CP_W;
+    eatedCounters = {0,0};
 
     wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
 	wPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, wMaterial);
@@ -215,6 +224,7 @@ function ChessBoard::IsValidDropPosition(p, legalMoves)
 function ChessBoard::DropToNewPosition(id, legalMoves)
 {
     var p = GetPieceFrom32id(id);
+    var oldPos = p.position;
     cbMatrix[p.position] = Void;
     OutputLN(p.position);
     var newPos = GetPosFromXY(p.obj.GetPosition());
@@ -229,6 +239,20 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
             EatPieceIn(newPos);
         cbMatrix[newPos] = p;
+        if(oldPos != newPos)
+        {
+            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
+            OutputLN(latestMove);
+            if(turn == CP_B)
+            {
+                totalMovesCounter++;
+                turn = CP_W;
+            }
+            else
+                turn = CP_B;
+
+        }
+
         return true;
     }
 
@@ -277,6 +301,15 @@ function ChessBoard::GetPosFromXY(p)
     return x*8 + z;
 }
 
+/* TODO: complete if useful
+function ChessBoard::GetPosFrom64(pos, pieceDim)
+{
+    var row = Int(pos/8);
+    var col = pos % 8;
+
+    var x = row * (dimension/8)
+}
+*/
 function ChessBoard::CanMoveTo(color, dest)
 {
     if(dest < 0 || dest > 63)
@@ -474,10 +507,9 @@ function ChessBoard::CalcNewPos(pos, r, c, result)
 }
 
 
-function ChessBoard::GenerateFENString(turn)
+function ChessBoard::GenerateFENChessboard(turn)
 {
-    var wPieceToFEN = {"P","R","N","B","Q","K"};
-    var bPieceToFEN = {"p","r","n","b","q","k"};
+    var pieceToFEN = {"P","R","N","B","Q","K"};
     var string = "";
     for(var rank = 7; rank >= 0; rank--)
     {
@@ -489,9 +521,9 @@ function ChessBoard::GenerateFENString(turn)
             if(p == Void)
                 string += "1";
             else if(p.color == CP_W)
-                string += wPieceToFEN[p.type];
+                string += pieceToFEN[p.type];
             else
-                string += bPieceToFEN[p.type];
+                string += lower(pieceToFEN[p.type]);
         }
 
         if(rank != 0)
@@ -511,9 +543,57 @@ function ChessBoard::GenerateFENString(turn)
 
     //total moves counter
     string += Sprintf(" %d", totalMovesCounter);
-    if(turn == CP_B)
-        totalMovesCounter++;
 
     return string;
 }
+
+function ChessBoard::GenerateMovetext(oldPos, newPos)
+{
+    var start = Conv64ToAH(oldPos);
+    var end = Conv64ToAH(newPos);
+
+    return Sprintf("%s%s", start, end);
+}
+
+function ChessBoard::MakeMovetextMove(movetext)
+{
+
+    var startPos = AHto64(movetext[0], movetext[1]);
+    var endPos = AHto64(movetext[2], movetext[3]);
+    MovePieceToPos(cbMatrix[startPos], endPos);
+}
+
+function ChessBoard::MovePieceToPos(p, newPos)
+{
+    var oldPos = p.position;
+    cbMatrix[p.position] = Void;
+    p.position = newPos;
+    if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
+        EatPieceIn(newPos);
+    cbMatrix[newPos] = p;
+    if(oldPos != newPos)
+    {
+        p.SetXYPos(corner, dimension);
+
+        latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
+        OutputLN(latestMove);
+        if(turn == CP_B)
+        {
+            totalMovesCounter++;
+            turn = CP_W;
+        }
+        else
+            turn = CP_B;
+    }
+}
+
+function ChessBoard::Conv64ToAH(pos)
+{
+    var lett = lower(letters[pos%8]);
+    OutputLN(lett);
+    var rank = Int(pos/8)+1;
+
+    return Sprintf("%s%d", lett, rank);
+}
+
 #endif
