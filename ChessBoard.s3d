@@ -52,7 +52,7 @@ class ChessBoard
     MovePieceToPos(piece, pos);
     LegalMoves(piece);
     CanMoveTo(color, dest);
-    GenerateFENChessboard(turn);
+    GenerateFENChessboard();
     GenerateMovetext(oldPos, newPos);
     MakeMovetextMove(movetext);
     CalcNewPos(pos, r, c,  result);
@@ -507,7 +507,7 @@ function ChessBoard::CalcNewPos(pos, r, c, result)
 }
 
 
-function ChessBoard::GenerateFENChessboard(turn)
+function ChessBoard::GenerateFENChessboard()
 {
     var pieceToFEN = {"P","R","N","B","Q","K"};
     var string = "";
@@ -557,9 +557,8 @@ function ChessBoard::GenerateMovetext(oldPos, newPos)
 
 function ChessBoard::MakeMovetextMove(movetext)
 {
-
-    var startPos = AHto64(movetext[0], movetext[1]);
-    var endPos = AHto64(movetext[2], movetext[3]);
+    var startPos = AHto64(movetext[0], val(movetext[1]));
+    var endPos = AHto64(movetext[2], val(movetext[3]));
     MovePieceToPos(cbMatrix[startPos], endPos);
 }
 

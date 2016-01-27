@@ -71,6 +71,7 @@ var mat;
 //var pieces_dropping = Array(16);
 var cb;
 var legalMoves = null;
+var playerColor = CP_W;
 
 var m_chessboard;
 var o_chessboard;
@@ -287,6 +288,7 @@ function OnInit(params)
 
 	cb = ChessBoard([-16,0,-16], 32, m_white, m_black);
 	cb.Init();
+	//OutputLN(cb.GenerateFENChessboard(CP_W));
 
 	/*
 	//Istantiate pieces
@@ -370,106 +372,126 @@ function OnFrame()
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
 
+	cb.DropPieces();
 
 	//OutputLN(modulus(f1_pos - f0_pos));
-	//Check if gripping
-	if(modulus(f1_pos - f0_pos) < gripDistance)
+
+	if(cb.turn == playerColor)
 	{
-		f0.forceMaterial(mat);
-		f1.forceMaterial(mat);
-		mov_gripping = true;
+		//Check if gripping
+		if(modulus(f1_pos - f0_pos) < gripDistance)
+		{
+			f0.forceMaterial(mat);
+			f1.forceMaterial(mat);
+			mov_gripping = true;
+		}
+		else
+		{
+			f0.forceMaterial();
+			f1.forceMaterial();
+			mov_gripping = false;
+		}
+
+
+		//Check if and which piece I'm touching
+		mov_touching = false;
+		//mov_piece = -1;
+		var tmp = cb.FindTouched(f0);
+		if(tmp != -1)
+		{
+			mov_touching = true;
+			if(!mov_moving)
+				mov_piece = tmp;
+		}
+
+
+
+		//for(var i=0; i<16 ; i++)
+		//{
+			/*
+			if(pieces[i].obj.IsCollidingBBox(f0))//|| pieces[i].IsCollidingBBox(f1))
+			{
+				pieces[i].obj.ModulateMaterials(1,1,1,0.5);
+				pieces[i].obj.ForceMaterial(mat);
+				mov_touching = true;
+				if(!mov_moving) //if I'm already moving a piece, don't update the id
+					mov_piece = i;
+			}
+			else
+			{
+				pieces[i].obj.ModulateMaterials(1,1,1,1);
+				pieces[i].obj.ForceMaterial();
+			}
+			*/
+
+			/*
+			if(pieces_dropping[i])
+			{
+				var  drop_step = 100;
+				var dist = pieces[i].obj.GetPosition();
+
+
+
+				if(dist[1] != 0)
+				{
+					var decr;
+					if(0.1 < dist[1])
+						decr = dist[1]/drop_step;
+					else
+						decr = dist[1];
+
+					pieces[i].obj.SetPosition(dist[0] - dist[0]%4, dist[1] - decr, dist[2]- dist[2]%4);
+				}
+				else
+					pieces_dropping[i] = false;
+			}
+			*/
+		//}
+
+		if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
+		{
+			mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
+			mov_moving = true;
+			OutputLN("Star Moving: ", mov_offset, mov_piece);
+			legalMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+		}
+		else if (!mov_gripping || !mov_touching) //stop moving piece
+		{
+			var res = true;
+			if(mov_moving) //If previous moving, add to dropping pieces
+			{
+				res = cb.DropToNewPosition(mov_piece, legalMoves);
+			}
+			if(res)
+			{
+				mov_moving = false;
+				mov_piece = -1;
+				legalMoves = null;
+			}
+			else
+				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
+		}
+		else if(mov_moving)
+		{
+			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
+		}
 	}
 	else
 	{
-		f0.forceMaterial();
-		f1.forceMaterial();
-		mov_gripping = false;
-	}
-
-
-	//Check if and which piece I'm touching
-	mov_touching = false;
-	//mov_piece = -1;
-	var tmp = cb.FindTouched(f0);
-	if(tmp != -1)
-	{
-		mov_touching = true;
-		if(!mov_moving)
-			mov_piece = tmp;
-	}
-
-	cb.DropPieces();
-
-	//for(var i=0; i<16 ; i++)
-	//{
-		/*
-		if(pieces[i].obj.IsCollidingBBox(f0))//|| pieces[i].IsCollidingBBox(f1))
-		{
-			pieces[i].obj.ModulateMaterials(1,1,1,0.5);
-			pieces[i].obj.ForceMaterial(mat);
-			mov_touching = true;
-			if(!mov_moving) //if I'm already moving a piece, don't update the id
-				mov_piece = i;
-		}
+		var cmd;
+		if(cb.totalMovesCounter == 1)
+			cmd = Sprintf("position startpos moves %s\ngo\n", cb.latestMove[2]);
 		else
-		{
-			pieces[i].obj.ModulateMaterials(1,1,1,1);
-			pieces[i].obj.ForceMaterial();
-		}
-		*/
+			cmd = Sprintf("position fen %s moves %s\ngo\n", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
-		/*
-		if(pieces_dropping[i])
-		{
-			var  drop_step = 100;
-			var dist = pieces[i].obj.GetPosition();
-
-
-
-			if(dist[1] != 0)
-			{
-				var decr;
-				if(0.1 < dist[1])
-					decr = dist[1]/drop_step;
-				else
-					decr = dist[1];
-
-				pieces[i].obj.SetPosition(dist[0] - dist[0]%4, dist[1] - decr, dist[2]- dist[2]%4);
-			}
-			else
-				pieces_dropping[i] = false;
-		}
-		*/
-	//}
-
-	if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
-	{
-		mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
-		mov_moving = true;
-		OutputLN("Star Moving: ", mov_offset, mov_piece);
-		legalMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+		OutputLN(cmd);
+		NetSendToTCP(ce_channel, cmd);
+		Sleep(1000);
+		OutputLN("receiving response");
+		ce_data = NetReceiveFromTCP(ce_channel);
+		OutputLN(ce_data);
+		cb.MakeMovetextMove(ce_data);
 	}
-	else if (!mov_gripping || !mov_touching) //stop moving piece
-	{
-		var res = true;
-		if(mov_moving) //If previous moving, add to dropping pieces
-		{
-			res = cb.DropToNewPosition(mov_piece, legalMoves);
-		}
-		if(res)
-		{
-			mov_moving = false;
-			mov_piece = -1;
-			legalMoves = null;
-		}
-		else
-			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
-	}
-	else if(mov_moving)
-	{
-		cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
-	}
-
 	/*
 	if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
 	{

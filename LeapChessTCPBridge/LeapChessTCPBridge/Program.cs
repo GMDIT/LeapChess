@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace LeapChessTCPBridge
 {
@@ -33,7 +34,7 @@ namespace LeapChessTCPBridge
             }
 
 
-
+            OMGareYouUsingGOTO:
             // Start the Sort.exe process with redirected input.
             // Use the sort command to sort the input text.
             Process engine = new Process();
@@ -110,25 +111,45 @@ namespace LeapChessTCPBridge
 
             // Loop to receive all the data sent by the client.
             // leapchess ->  read from tcp -> send to engine -> read engine output -> send to tcp -> leapchess
-            while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+            try 
+            { 
+                while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+                {
+                    // Translate data bytes to a ASCII string.
+                    data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
+                    Console.WriteLine("Received: {0}", data);
+
+                    //send to engine
+                    myStreamWriter.Write(data);
+                    System.Threading.Thread.Sleep(100);
+                    //read engine output
+                    o = ReadOutput(myStreamReader);
+                    
+                    Console.WriteLine(">>" + o);
+                    
+                    //TODO: it works, but is veeeery ugly
+                    var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
+                    var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    
+                    Console.WriteLine(">>" + bestmove[1]);
+                    byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
+
+                    // Send engine output to tcp
+                    stream.Write(msg, 0, msg.Length);
+                    Console.WriteLine("Sent: {0}", o);
+                }
+            } 
+            catch(Exception e)
             {
-                // Translate data bytes to a ASCII string.
-                data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-                Console.WriteLine("Received: {0}", data);
+                Console.WriteLine("Exception caught ({0}), maybe client disconected. Restarting with a beautiful goto", e.ToString());
+                myStreamWriter.Write("quit\n");
+                myStreamWriter.Close();
+                myStreamReader.Close();
+                engine.Close();
+                client.Close();
+                server.Stop();
+                goto OMGareYouUsingGOTO;
 
-                //send to engine
-                myStreamWriter.WriteLine(data);
-
-                //read engine output
-                o = ReadOutput(myStreamReader);
-                Console.WriteLine(">>" + o);                
-
-
-                byte[] msg = System.Text.Encoding.ASCII.GetBytes(o.Trim());
-
-                // Send back a response.
-                stream.Write(msg, 0, msg.Length);
-                Console.WriteLine("Sent: {0}", o);
             }
 
 
