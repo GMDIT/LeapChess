@@ -53,6 +53,7 @@ class ChessPiece
     var obj;
 
     var myDim;
+    var isDropping;
 
     Draw(flag);
     SetXYPos(c, d);
@@ -64,6 +65,7 @@ function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
     type = t;
     position = pos;
     color = c;
+    isDropping = false;
 
     switch (t) {
         case CP_PAWN:

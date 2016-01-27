@@ -486,7 +486,7 @@ function OnFrame()
 
 		OutputLN(cmd);
 		NetSendToTCP(ce_channel, cmd);
-		Sleep(1000);
+		Sleep(100);
 		OutputLN("receiving response");
 		ce_data = NetReceiveFromTCP(ce_channel);
 		OutputLN(ce_data);

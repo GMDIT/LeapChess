@@ -164,16 +164,22 @@ function ChessBoard::DropPieces()
     for(var i = 0; i<32; i++)
     {
         var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
-        if(isDropping[i])
+        if(p.isDropping)
         {
             var  drop_step = 75;
 			var pos = p.obj.GetPosition();
             var cbStep = dimension/8;
 
-            var distX = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
+            var distX = 0;// = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
             var distY = pos[1];
-            var distZ = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
+            var distZ = 0;// = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
 
+            if(p.position != -1) //-1 -> the piece is eated
+            {
+                distX = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
+                distZ = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
+            }
+            
             var decrX = 0.0;
             var decrY = 0.0;
             var decrZ = 0.0;
@@ -201,7 +207,7 @@ function ChessBoard::DropPieces()
 					decrY = distY;
 			}
 			else
-                isDropping[i] = false;
+                p.isDropping = false;
 
             p.obj.SetPosition(pos[0] - decrX, pos[1] - decrY, pos[2] - decrZ);
         }
@@ -233,7 +239,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         return false;
     else
     {
-        isDropping[id] = true;
+        p.isDropping = true;
         p.position = newPos;
         OutputLN(p.position);
         if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
@@ -250,12 +256,9 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
             }
             else
                 turn = CP_B;
-
         }
-
         return true;
     }
-
 }
 
 function ChessBoard::EatPieceIn(pos)
@@ -263,9 +266,15 @@ function ChessBoard::EatPieceIn(pos)
     var p = cbMatrix[pos];
     var c = p.color;
     var e = eatedCounters[c];
-    var posX = (c==CP_W ? corner[0] + (e*4)%8 : - corner[0] - (e*4)%8);
-    var posZ = (c==CP_W ? corner[0] - 4 - (e<8?0:4) : - corner[0] + 4 + (e<8?0:4));
-    p.obj.SetPosition(posX, 2, posZ);
+
+    var posX = c==CP_W ? corner[0] + (e%8) * 4 : -corner[0] - ((e%8)+1) * 4;
+    var posZ = c==CP_W ? corner[2] - 6 - 6 * Int(e/8) : -corner[2] + 2 + 6*Int(e/8);
+    //var posX = (c==CP_W ? corner[0] + (e*4)%8 : - corner[0] - (e*4)%8);
+    //var posZ = (c==CP_W ? corner[2] - 14 - (e<8?0:4) : - corner[2] + 14 + (e<8?0:4));
+
+    p.isDropping = true;
+    p.obj.SetPosition(posX, 10, posZ);
+
     eatedCounters[c] = e+1;
     p.position = -1;
 }
@@ -572,7 +581,9 @@ function ChessBoard::MovePieceToPos(p, newPos)
     cbMatrix[newPos] = p;
     if(oldPos != newPos)
     {
-        p.SetXYPos(corner, dimension);
+        //workaround, TODO: rewrite
+        p.SetXYPos([corner[0], 15, corner[2]], dimension);
+        p.isDropping = true;
 
         latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
         OutputLN(latestMove);
