@@ -179,7 +179,7 @@ function ChessBoard::DropPieces()
                 distX = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
                 distZ = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
             }
-            
+
             var decrX = 0.0;
             var decrY = 0.0;
             var decrZ = 0.0;
@@ -540,6 +540,8 @@ function ChessBoard::GenerateFENChessboard()
     }
     if(turn == CP_W)
         string += " w";
+    else
+        string += " b";
 
     //no castling;
     string += " -";
