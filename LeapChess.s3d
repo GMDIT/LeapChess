@@ -374,7 +374,7 @@ function OnFrame()
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
 
-	cb.DropPieces();
+	cb.OnFrame();
 
 	//OutputLN(modulus(f1_pos - f0_pos));
 

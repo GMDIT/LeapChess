@@ -13,7 +13,8 @@ class Animator
 
 function Animator::Animator()
 {
-    objs = Array(10);
+    //TODO: fix
+    objs = Array(100);
     count = 0;
 }
 

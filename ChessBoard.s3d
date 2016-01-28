@@ -60,6 +60,7 @@ class ChessBoard
     MakeMovetextMove(movetext);
     CalcNewPos(pos, r, c,  result);
     Conv64ToAH(pos);
+    OnFrame();
     EndTurn();
 };
 
@@ -140,6 +141,12 @@ function ChessBoard::Init()
         }
 }
 
+function ChessBoard::OnFrame()
+{
+    DropPieces();
+    anim.Update();
+}
+
 function ChessBoard::DrawPieces(flag)
 {
     for(var i = 0; i<16; i++)
@@ -165,7 +172,6 @@ function ChessBoard::FindTouched(finger)
 function ChessBoard::DropPieces()
 {
     isDropping = false;
-    anim.Update();
     for(var i = 0; i<32; i++)
     {
         var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
