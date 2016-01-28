@@ -26,12 +26,14 @@ namespace LeapChessTCPBridge
         
         static void Main(string[] args)
         {
-            Console.WriteLine("Starting bridge: "  + args[0]);
             if (args.Length == 0)
             {
                 Console.WriteLine("Engine not specified!");
                 System.Environment.Exit(1);
             }
+
+            Console.WriteLine("Starting bridge: "  + args[0]);
+            
 
 
             OMGareYouUsingGOTO:
