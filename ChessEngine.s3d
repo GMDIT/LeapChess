@@ -1,0 +1,54 @@
+class ChessEngine
+{
+    var channel;
+    var data;
+    var port;
+
+    Connect();
+    DataReady();
+    Send(msg);
+    Receive();
+};
+
+function ChessEngine::ChessEngine(p)
+{
+    port = p;
+}
+
+function ChessEngine::Connect()
+{
+    var t = 3;
+    do
+    {
+        channel = NetConnectTCP("localhost", port, VR_NO_BLOCKING);
+
+        if(channel !=0)
+        {
+            OutputLN("Connected to engine");
+            return true;
+        }
+        else
+        {
+            OutputLN("Connection Fail, try: " + t);
+            t--;
+            Sleep(1000);
+        }
+    } while(t > 0);
+
+    return false;
+}
+
+function ChessEngine::DataReady(timeout)
+{
+    return NetDataReady(channel, timeout);
+}
+
+function ChessEngine::Receive()
+{
+    return NetReceiveFromTCP(channel);
+}
+
+function ChessEngine::Send(msg)
+{
+    NetSendToTCP(channel, msg);
+}

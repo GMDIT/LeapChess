@@ -57,6 +57,7 @@ class ChessPiece
 
     Draw(flag);
     SetXYPos(c, d);
+    CalcXYPosition(newPos, c, d);
     GetOffSet(d);
 };
 
@@ -111,6 +112,17 @@ function ChessPiece::SetXYPos(c, d)
     var posY = c[1];
     var posZ = (position % 8) * step + offset + c[2];
     obj.SetPosition(posX, posY, posZ);
+}
+
+function ChessPiece::CalcXYPosition(newPos, c, d)
+{
+    var step = d/8;
+    var offset = (step - myDim) / 2;
+    var posX = Int(newPos / 8) * step + offset + c[0];
+    var posY = c[1];
+    var posZ = (newPos % 8) * step + offset + c[2];
+
+    return [posX, posY, posZ];
 }
 
 function ChessPiece::GetOffSet(d)

@@ -2,6 +2,7 @@
 #define _CHESSBOARD
 
 #include "ChessPiece.s3d"
+#include "Animator.s3d"
 /*
 —— a  b  c  d  e  f  g  h
 8 ║56 57 58 59 60 61 62 63
@@ -37,6 +38,8 @@ class ChessBoard
     var turn;
     var latestMove;
 
+    var anim;
+
     Init();
     DrawPieces(flag);
     FindTouched(finger);
@@ -57,6 +60,7 @@ class ChessBoard
     MakeMovetextMove(movetext);
     CalcNewPos(pos, r, c,  result);
     Conv64ToAH(pos);
+    EndTurn();
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -79,8 +83,9 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
     cbMatrix = Array(64);
     letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
 
-    isDropping = Array(32);
+    isDropping = false;
 
+    anim = Animator();
 }
 /*
 —— a  b  c  d  e  f  g  h
@@ -127,11 +132,9 @@ function ChessBoard::Init()
     for(var i=0; i<16; i++)
         {
             wPieces[i].SetXYPos(corner, dimension);
-            isDropping[i] = false;
             cbMatrix[wPieces[i].position] = wPieces[i];
 
             bPieces[i].SetXYPos(corner, dimension);
-            isDropping[i+16] = false;
             cbMatrix[bPieces[i].position] = bPieces[i];
             //OutputLN(cbMatrix[32] == Void);
         }
@@ -161,6 +164,8 @@ function ChessBoard::FindTouched(finger)
 
 function ChessBoard::DropPieces()
 {
+    isDropping = false;
+    anim.Update();
     for(var i = 0; i<32; i++)
     {
         var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
@@ -205,6 +210,8 @@ function ChessBoard::DropPieces()
 					decrY = distY/drop_step;
 				else
 					decrY = distY;
+
+                isDropping = true;
 			}
 			else
                 p.isDropping = false;
@@ -249,13 +256,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         {
             latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
             OutputLN(latestMove);
-            if(turn == CP_B)
-            {
-                totalMovesCounter++;
-                turn = CP_W;
-            }
-            else
-                turn = CP_B;
+            EndTurn();
         }
         return true;
     }
@@ -272,8 +273,10 @@ function ChessBoard::EatPieceIn(pos)
     //var posX = (c==CP_W ? corner[0] + (e*4)%8 : - corner[0] - (e*4)%8);
     //var posZ = (c==CP_W ? corner[2] - 14 - (e<8?0:4) : - corner[2] + 14 + (e<8?0:4));
 
-    p.isDropping = true;
-    p.obj.SetPosition(posX, 10, posZ);
+
+    anim.Add(p, p.obj.GetPosition(), [posX, 10, posZ], 30);
+    //p.isDropping = true;
+    //p.obj.SetPosition(posX, 10, posZ);
 
     eatedCounters[c] = e+1;
     p.position = -1;
@@ -583,19 +586,17 @@ function ChessBoard::MovePieceToPos(p, newPos)
     cbMatrix[newPos] = p;
     if(oldPos != newPos)
     {
+        var oldPosXY = p.CalcXYPosition(oldPos, corner, dimension);
+        var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
+        anim.Add(p, p.obj.GetPosition(), newPosXY, 0);
+
         //workaround, TODO: rewrite
-        p.SetXYPos([corner[0], 15, corner[2]], dimension);
-        p.isDropping = true;
+        //p.SetXYPos([corner[0], 15, corner[2]], dimension);
+        //p.isDropping = true;
 
         latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
         OutputLN(latestMove);
-        if(turn == CP_B)
-        {
-            totalMovesCounter++;
-            turn = CP_W;
-        }
-        else
-            turn = CP_B;
+        EndTurn();
     }
 }
 
@@ -606,6 +607,17 @@ function ChessBoard::Conv64ToAH(pos)
     var rank = Int(pos/8)+1;
 
     return Sprintf("%s%d", lett, rank);
+}
+
+function ChessBoard::EndTurn()
+{
+    if(turn == CP_B)
+    {
+        totalMovesCounter++;
+        turn = CP_W;
+    }
+    else
+        turn = CP_B;
 }
 
 #endif

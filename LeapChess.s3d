@@ -86,6 +86,8 @@ var mov_moving = false;
 var mov_offset;
 var mov_piece = -1;
 
+
+var cmdSent = false;
 //var dropping = false;
 //var dropping_ids;
 
@@ -476,21 +478,29 @@ function OnFrame()
 			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
 		}
 	}
-	else
+	else //cb.turn != playerColor
 	{
-		var cmd;
-		if(cb.totalMovesCounter == 1)
-			cmd = Sprintf("position startpos moves %s\ngo\n", cb.latestMove[2]);
-		else
-			cmd = Sprintf("position fen %s moves %s\ngo\n", cb.GenerateFENChessboard(), cb.latestMove[2]);
+		if(!cmdSent)
+		{
+			var cmd;
+			if(cb.totalMovesCounter == 1)
+				cmd = Sprintf("position startpos moves %s\ngo\n", cb.latestMove[2]);
+			else
+				cmd = Sprintf("position fen %s moves %s\ngo\n", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
-		OutputLN(cmd);
-		NetSendToTCP(ce_channel, cmd);
-		Sleep(100);
-		OutputLN("receiving response");
-		ce_data = NetReceiveFromTCP(ce_channel);
-		OutputLN(ce_data);
-		cb.MakeMovetextMove(ce_data);
+			OutputLN(cmd);
+			NetSendToTCP(ce_channel, cmd);
+			OutputLN("CMD sent");
+			cmdSent = true;
+		}
+
+		if (!cb.isDropping) //wait for the dropping pieces
+		{
+			ce_data = NetReceiveFromTCP(ce_channel);
+			OutputLN("<< " + ce_data);
+			cb.MakeMovetextMove(ce_data);
+			cmdSent = false;
+		}
 	}
 	/*
 	if(mov_gripping && mov_touching && !mov_moving) //start moving the piece
