@@ -1,7 +1,9 @@
 class Animator
 {
+    var size;
     var objs;
-    var count;
+    var head;
+    var tail;
 
     Add(obj, startPos, endPos, hMax);
     Update();
@@ -13,22 +15,22 @@ class Animator
 
 function Animator::Animator()
 {
-    //TODO: fix
-    objs = Array(100);
-    count = 0;
+    size = 6;
+    objs = Array(size);
+    head = 0;
+    tail = 0;
 }
 
 function Animator::Add(obj, startPos, endPos, hMax)
 {
-    objs[count] = {obj, 0.0, startPos, endPos, hMax};
-    count++;
-    //asize(objs, count);
-    //aadd(objs, {obj, 0.0, startPos, endPos, hMax});
+    objs[tail] = {obj, 0.0, startPos, endPos, hMax};
+    tail = (tail + 1) % size;
 }
 
 function Animator::Update()
 {
-    for(var i = 0; i < count ; i++)
+    var i = head;
+    while(i != tail)
     {
         var o = objs[i];
         var t = o[1];
@@ -39,6 +41,10 @@ function Animator::Update()
             var newPos = CalcParabola(o[2][0], o[3][0], o[2][2], o[3][2], o[2][1], o[4], t);
             o[0].obj.SetPosition(newPos);
         }
+        else
+            head = (head + 1) % size;
+
+        i = (i+1) % size;
     }
 }
 

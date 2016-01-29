@@ -280,7 +280,7 @@ function ChessBoard::EatPieceIn(pos)
     //var posZ = (c==CP_W ? corner[2] - 14 - (e<8?0:4) : - corner[2] + 14 + (e<8?0:4));
 
 
-    anim.Add(p, p.obj.GetPosition(), [posX, 10, posZ], 30);
+    anim.Add(p, p.obj.GetPosition(), [posX, 10, posZ], 60);
     //p.isDropping = true;
     //p.obj.SetPosition(posX, 10, posZ);
 
@@ -594,7 +594,7 @@ function ChessBoard::MovePieceToPos(p, newPos)
     {
         var oldPosXY = p.CalcXYPosition(oldPos, corner, dimension);
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
-        anim.Add(p, p.obj.GetPosition(), newPosXY, 0);
+        anim.Add(p, p.obj.GetPosition(), newPosXY, 30);
 
         //workaround, TODO: rewrite
         //p.SetXYPos([corner[0], 15, corner[2]], dimension);
