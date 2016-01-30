@@ -403,14 +403,9 @@ function OnFrame()
 			OutputLN("Star Moving: ", mov_offset, mov_piece);
 			highlightSquares = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
 		}
-		else if (!mov_gripping || !mov_touching) //stop moving piece
+		else if ((!mov_gripping || !mov_touching) && mov_moving) //stop moving piece
 		{
-			var res = true;
-			if(mov_moving) //If previous moving, add to dropping pieces
-			{
-				res = cb.DropToNewPosition(mov_piece, highlightSquares);
-			}
-			if(res)
+			if(cb.DropToNewPosition(mov_piece, highlightSquares))
 			{
 				mov_moving = false;
 				mov_piece = -1;
