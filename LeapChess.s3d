@@ -484,7 +484,7 @@ function OnFrame()
 	SceneBegin();
 
 		if(mov_moving)
-			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5], true);
+			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
 		else
 			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
@@ -577,10 +577,6 @@ function DrawGroundLine(size, pos, color, centered)
 	    x = Int((pos[0]+c+16) / 4) * 4 + 2 - 16;
 	    z = Int((pos[2]+c+16) / 4) * 4 + 2 - 16 ;
 	}
-
-
-
-
 
 	glLineWidth(1);
 	glDisable(GL_LIGHTING);

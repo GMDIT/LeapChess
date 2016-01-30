@@ -246,8 +246,8 @@ function ChessBoard::DropPieces()
 function ChessBoard::IsValidDropPosition(p, legalMoves)
 {
     //var p = GetPieceFrom32id(id);
-    //var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);//TODO: test!
-    var newPos = GetPosFromXY(p.obj.GetPosition());
+    var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
+    //var newPos = GetPosFromXY(p.obj.GetPosition());
     if(newPos < 0)
         return false;
     else
@@ -266,8 +266,8 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
     var oldPos = p.position;
     cbMatrix[p.position] = Void;
     OutputLN(p.position);
-    //var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim); //TODO: test!
-    var newPos = GetPosFromXY(p.obj.GetPosition());
+    var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
+    //var newPos = GetPosFromXY(p.obj.GetPosition());
 
     if(!IsValidDropPosition(p, legalMoves))
         return false;
