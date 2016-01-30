@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Runtime.Remoting.Contexts;
 
 namespace LeapChessTCPBridge
 {
@@ -20,8 +21,8 @@ namespace LeapChessTCPBridge
             }
             str.Append("\n");
 
-            Console.WriteLine("<< " + str.ToString());
-            return str.ToString();
+            Console.WriteLine("engine << " + str.ToString());
+            return str.ToString().Trim();
         }
         
         static void Main(string[] args)
@@ -35,12 +36,8 @@ namespace LeapChessTCPBridge
             Console.WriteLine("Starting bridge: "  + args[0]);
             
 
-
-            OMGareYouUsingGOTO:
-            // Start the Sort.exe process with redirected input.
-            // Use the sort command to sort the input text.
+            //Starting the chess engine process
             Process engine = new Process();
-
             engine.StartInfo.FileName = args[0];
             engine.StartInfo.UseShellExecute = false;
             engine.StartInfo.RedirectStandardInput = true;
@@ -55,39 +52,19 @@ namespace LeapChessTCPBridge
             
             StringBuilder output = new StringBuilder();
 
-            while (myStreamReader.Peek() != -1){ output.Append((char)myStreamReader.Read());}
-            Console.WriteLine(output);
-            output.Clear();
-
-           
-            
+            String o = ReadOutput(myStreamReader);
                 
             //init Stockfish
             Console.WriteLine("Engine init");
 
             myStreamWriter.WriteLine("uci");
-            String o = ReadOutput(myStreamReader);
+            o = ReadOutput(myStreamReader);
 
             myStreamWriter.WriteLine("isready");
             o = ReadOutput(myStreamReader);
 
 
-            /*
-            myStreamReader.DiscardBufferedData();
-            myStreamWriter.Write("uci\n");
-            while (myStreamReader.Peek() == -1) { }
-            while (myStreamReader.Peek() != -1) { output.Append((char)myStreamReader.Read()); }
-            Console.WriteLine(output);
-            output.Clear();
-
-            Console.WriteLine("Engine boh2");
-            myStreamReader.DiscardBufferedData();
-            myStreamWriter.WriteLine("isready");
-            while (myStreamReader.Peek() != -1) { output.Append((char)myStreamReader.Read()); }
-            Console.WriteLine(output);
-            //output.Clear();
-            */
-            if (o.Trim() != "readyok")
+            if (o != "readyok")
             {
                 Console.WriteLine("Failed initializing StockFish. Output: " + output);
             }
@@ -104,7 +81,6 @@ namespace LeapChessTCPBridge
 
             Console.Write("Waiting for a connection... ");
             // Perform a blocking call to accept requests.
-            // You could also user server.AcceptSocket() here.
             TcpClient client = server.AcceptTcpClient();
             Console.WriteLine("Connected!");
             NetworkStream stream = client.GetStream();
@@ -113,26 +89,24 @@ namespace LeapChessTCPBridge
 
             // Loop to receive all the data sent by the client.
             // leapchess ->  read from tcp -> send to engine -> read engine output -> send to tcp -> leapchess
-            try 
-            { 
+            try
+            {
                 while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
                 {
                     // Translate data bytes to a ASCII string.
                     data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-                    Console.WriteLine("Received: {0}", data);
+                    Console.WriteLine("leapchess>> {0}", data);
 
                     //send to engine
-                    myStreamWriter.Write(data);
+                    myStreamWriter.Write(data + "\nd\n");
                     System.Threading.Thread.Sleep(100);
                     //read engine output
                     o = ReadOutput(myStreamReader);
-                    
-                    Console.WriteLine(">>" + o);
-                    
+
                     //TODO: it works, but is veeeery ugly
                     var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
                     var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-                    
+
                     Console.WriteLine(">>" + bestmove[1]);
                     byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
 
@@ -140,67 +114,26 @@ namespace LeapChessTCPBridge
                     stream.Write(msg, 0, msg.Length);
                     Console.WriteLine("Sent: {0}", o);
                 }
-            } 
-            catch(Exception e)
-            {
-                Console.WriteLine("Exception caught ({0}), maybe client disconected. Restarting with a beautiful goto", e.ToString());
-                myStreamWriter.Write("quit\n");
-                myStreamWriter.Close();
-                myStreamReader.Close();
-                engine.Close();
-                client.Close();
-                server.Stop();
-                goto OMGareYouUsingGOTO;
-
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception caught ({0}), maybe client disconected.", e.ToString());
+                myStreamWriter.Write("quit\n");
+                // start new process
+                System.Diagnostics.Process.Start(
+                     Environment.GetCommandLineArgs()[0],
+                     Environment.GetCommandLineArgs()[1]);
 
-
-
-
-
-
-            /*
-             // Prompt the user for input text lines to sort. 
-             // Write each line to the StandardInput stream of
-             // the sort command.
-             String inputText;
-             int numLines = 0;
-             do 
-             {
-                Console.WriteLine("Enter a line of text (or press the Enter key to stop):");
-
-                inputText = Console.ReadLine();
-                if (inputText.Length > 0)
-                {
-                   numLines ++;
-                   myStreamWriter.WriteLine(inputText);
-                }
-             } while (inputText.Length != 0);
-
-
-             // Write a report header to the console.
-             if (numLines > 0)
-             {
-                Console.WriteLine(" {0} sorted text line(s) ", numLines);
-                Console.WriteLine("------------------------");
-             }
-             else 
-             {
-                Console.WriteLine(" No input was sorted");
-             }
-                */
-            // End the input stream to the sort command.
-            // When the stream closes, the sort command
-            // writes the sorted text lines to the 
-            // console.
+                // close current process
+                Environment.Exit(0);
+            }
+            // End the input/output stream to the chess engine.
             myStreamWriter.Close();
             myStreamReader.Close();
 
-
-            // Wait for the sort process to write the sorted text lines.
+            // Wait for the engine process.
             engine.WaitForExit();
             engine.Close();
-
         }
     }
 }
