@@ -42,13 +42,18 @@ class ChessBoard
 
     Init();
     DrawPieces(flag);
-    FindTouched(finger);
+    FindTouched(finger, playerColor);
     DropPieces();
     GetPiecePosition(id);
     GetPieceFrom32id(id);
     DropToNewPosition(mov_piece, legalMoves);
     FreeMovePiece(id, pos, legalMoves);
     GetPosFromXY(p);
+
+    //given the position of the corner, and dimension of the piece, return the
+    // 64 position of the center of the piece
+    GetCenteredPosFromXY(p, dim);
+
     //GetPosFrom64(pos);
     IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
@@ -156,8 +161,18 @@ function ChessBoard::DrawPieces(flag)
     }
 }
 
-function ChessBoard::FindTouched(finger)
+function ChessBoard::FindTouched(finger, playerColor)
 {
+    //can touch only own pieces
+    var pieces = playerColor == CP_W ? wPieces : bPieces;
+
+    for(var i=0; i<16; i++)
+    {
+        if(pieces[i].obj.IsCollidingBBox(finger))
+            return pieces[i].position != -1 ? i : -1;
+            //can touch only non-eated pieces
+    }
+/*
     for(var i=0; i<16; i++)
     {
         if(wPieces[i].obj.IsCollidingBBox(finger))
@@ -166,6 +181,7 @@ function ChessBoard::FindTouched(finger)
         if(bPieces[i].obj.IsCollidingBBox(finger))
             return i+16;
     }
+*/
     return -1;
 }
 
@@ -230,8 +246,12 @@ function ChessBoard::DropPieces()
 function ChessBoard::IsValidDropPosition(p, legalMoves)
 {
     //var p = GetPieceFrom32id(id);
+    //var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);//TODO: test!
     var newPos = GetPosFromXY(p.obj.GetPosition());
-    return legalMoves[newPos] != Void;
+    if(newPos < 0)
+        return false;
+    else
+        return legalMoves[newPos] != Void;
 /*
     if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos].color != p.color)
         return true;
@@ -246,6 +266,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
     var oldPos = p.position;
     cbMatrix[p.position] = Void;
     OutputLN(p.position);
+    //var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim); //TODO: test!
     var newPos = GetPosFromXY(p.obj.GetPosition());
 
     if(!IsValidDropPosition(p, legalMoves))
@@ -280,7 +301,7 @@ function ChessBoard::EatPieceIn(pos)
     //var posZ = (c==CP_W ? corner[2] - 14 - (e<8?0:4) : - corner[2] + 14 + (e<8?0:4));
 
 
-    anim.Add(p, p.obj.GetPosition(), [posX, 10, posZ], 60);
+    anim.Add(p, -0.6, p.obj.GetPosition(), [posX, 10, posZ], 60);
     //p.isDropping = true;
     //p.obj.SetPosition(posX, 10, posZ);
 
@@ -319,6 +340,15 @@ function ChessBoard::GetPosFromXY(p)
     return x*8 + z;
 }
 
+function ChessBoard::GetCenteredPosFromXY(p, dim)
+{
+    var cbStep = dimension/8;
+    var c = dim/2;
+    var x = Int((p[0]+c+16) / cbStep);
+    var z = Int((p[2]+c+16) / cbStep);
+
+    return x*8 + z;
+}
 /* TODO: complete if useful
 function ChessBoard::GetPosFrom64(pos, pieceDim)
 {
@@ -577,9 +607,13 @@ function ChessBoard::GenerateMovetext(oldPos, newPos)
 
 function ChessBoard::MakeMovetextMove(movetext)
 {
+    var highlightSquares = Array(64);
     var startPos = AHto64(movetext[0], val(movetext[1]));
     var endPos = AHto64(movetext[2], val(movetext[3]));
+    highlightSquares[startPos] = true;
+    highlightSquares[endPos] = true;
     MovePieceToPos(cbMatrix[startPos], endPos);
+    return highlightSquares;
 }
 
 function ChessBoard::MovePieceToPos(p, newPos)
@@ -594,7 +628,7 @@ function ChessBoard::MovePieceToPos(p, newPos)
     {
         var oldPosXY = p.CalcXYPosition(oldPos, corner, dimension);
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
-        anim.Add(p, p.obj.GetPosition(), newPosXY, 30);
+        anim.Add(p, 0.0, p.obj.GetPosition(), newPosXY, 30);
 
         //workaround, TODO: rewrite
         //p.SetXYPos([corner[0], 15, corner[2]], dimension);

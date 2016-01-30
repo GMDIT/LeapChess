@@ -4,6 +4,7 @@
 #include "ChessSet.s3d"
 #include "ChessPiece.s3d"
 #include "ChessBoard.s3d"
+#include "ChessEngine.s3d"
 
 
 /* Set global scene parameters */
@@ -11,7 +12,8 @@ SET SCENE_FOV  = 60;
 SET SCENE_NEAR = 0.5;
 SET SCENE_FAR  = 1000;
 
-SET PORT = 4200;
+SET LEAP_PORT = 4200;
+SET ENGINE_PORT = 4242;
 
 var browser;
 var res_x = 1600;
@@ -22,6 +24,7 @@ var res_y = 900;
 /*ChessEngine server data */
 var ce_channel;
 var ce_data;
+var ce;
 
 /* LeapMotion Data */
 var lm_channel;
@@ -70,7 +73,7 @@ var mat;
 //var pieces_pos = Array(16);
 //var pieces_dropping = Array(16);
 var cb;
-var legalMoves = null;
+var highlightSquares = null;
 var playerColor = CP_W;
 
 var m_chessboard;
@@ -109,7 +112,7 @@ var PosL = CamPos;//[-45,40,0]; //CamPos;//[20, 45.0, 15];	// default light posi
 var Light1;
 var PosL1 = [0.0, 15.0, 30];	// default light position
 
-/*shadow mapping*/
+/**** shadow mapping*/
 var fbo;
 var shader;
 // additional OpenGL constants
@@ -121,17 +124,14 @@ var shader;
 #define LIGHT_CAMERA 1
 
 var shader_name = "adows.sh";
-
-
-
-
+/******* shadow mapping*/
 
 /* Function declarations */
 function CameraMoveMouse();
 function DrawGrid(col, size);
 
 function DrawGroundLine(size, pos, color, centered);
-function DrawLegalMoves();
+function DrawHighlightSquares();
 
 function RenderOnTexture();
 function FillTextureMatrix();
@@ -187,17 +187,16 @@ function OnInit(params)
 	// TODO: put your initialization code here
 
 	/*Connecting to Chess Engine Server*/
-	ce_channel = NetConnectTCP("localhost", 4242);
+	ce = ChessEngine(ENGINE_PORT);
+	ce.Connect();
+	/*
+	ce_channel = NetConnectTCP("localhost", ENGINE_PORT);
 	if(ce_channel == 0)
 		OutputLN("Error: impossible to connect to Chess Engine");
-	//NetSendToTCP(ce_channel, "Hello");
-	//ce_data = NetReceiveFromTCP(ce_channel);
-	//OutputLN(ce_data);
+	*/
 
 	/*Connectin to LeapMotionServer */
-	//localhost = NetGetIP();
-	//OutputLN(localhost);
-	lm_channel = NetCreateChannel(PORT, 0, VR_NO_BLOCKING);
+	lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
 	OutputLN(lm_channel);
 
 	/*Init fingers */
@@ -292,56 +291,6 @@ function OnInit(params)
 	cb.Init();
 	//OutputLN(cb.GenerateFENChessboard(CP_W));
 
-	/*
-	//Istantiate pieces
-	num_seg = 0;
-	var letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
-	for(var i = 0; i < 16; i++)
-	{
-		var min_corner = [0, 0, 0];
-		var max_corner = [3, 7 - (i<8?0:2), 3];
-
-
-		switch(i)
-		{
-			case 0:
-				pieces[i] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, m_white);
-				break;
-			case 1:
-				pieces[i] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, m_white);
-				break;
-			case 2:
-				pieces[i] = ChessPiece(CP_HORSE, AHto64("B", 1), CP_W, m_white, false);//getHorse(m_white);
-				break;
-			case 3:
-				pieces[i] = ChessPiece(CP_HORSE, AHto64("G", 1), CP_W, m_white, true);//getHorse(m_white);
-				break;
-			case 4:
-				pieces[i] = ChessPiece(CP_BISHOP, AHto64("C", 1), CP_W, m_white);//getHorse(m_white);
-				break;
-			case 5:
-				pieces[i] = ChessPiece(CP_BISHOP, AHto64("F", 1), CP_W, m_white);//getHorse(m_white);
-				break;
-			case 6:
-				pieces[i] = ChessPiece(CP_QUEEN, AHto64("D", 1), CP_W, m_white);//getHorse(m_white);
-				break;
-			case 7:
-				pieces[i] = ChessPiece(CP_KING, AHto64("E", 1), CP_W, m_white);//getHorse(m_white);
-				break;
-			default:
-				if(i<8)
-					pieces[i] = CVmObj(CVmNewMesh(VRP_BOX, num_seg, min_corner, max_corner));
-				else
-					pieces[i] = ChessPiece(CP_PAWN, AHto64(letters[i - 8], 2), CP_W, m_white);
-				break;
-		}
-
-		pieces[i].obj.SetPosition([0 + 0.5 + 4 * (i<8?0:1) -16, 0 , i*4 - 15.5 -(i<8?0:32) ]);
-		//pieces_pos[i] = pieces[i].GetPosition();
-
-		pieces_dropping[i] = false;
-	}
-	*/
 	CameraActivate(LIGHT_CAMERA);
 	CameraSetPosition(PosL);
 	CameraSetTarget([0, 0, 0]);
@@ -360,9 +309,6 @@ function OnFrame()
 		var data = "";
 		var recIp = "";
 		data = NetReceiveFrom(lm_channel, &recIP);
-		//OutputLN(recIP);
-		//OutputLN(data);
-		//oldDataValues = dataValues;
 		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
 
 		palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
@@ -398,7 +344,7 @@ function OnFrame()
 		//Check if and which piece I'm touching
 		mov_touching = false;
 		//mov_piece = -1;
-		var tmp = cb.FindTouched(f0);
+		var tmp = cb.FindTouched(f0, playerColor);
 		if(tmp != -1)
 		{
 			mov_touching = true;
@@ -455,27 +401,27 @@ function OnFrame()
 			mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
 			mov_moving = true;
 			OutputLN("Star Moving: ", mov_offset, mov_piece);
-			legalMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+			highlightSquares = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
 		}
 		else if (!mov_gripping || !mov_touching) //stop moving piece
 		{
 			var res = true;
 			if(mov_moving) //If previous moving, add to dropping pieces
 			{
-				res = cb.DropToNewPosition(mov_piece, legalMoves);
+				res = cb.DropToNewPosition(mov_piece, highlightSquares);
 			}
 			if(res)
 			{
 				mov_moving = false;
 				mov_piece = -1;
-				legalMoves = null;
+				highlightSquares = null;
 			}
 			else
-				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
+				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, highlightSquares);
 		}
 		else if(mov_moving)
 		{
-			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, legalMoves);
+			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, highlightSquares);
 		}
 	}
 	else //cb.turn != playerColor
@@ -489,16 +435,17 @@ function OnFrame()
 				cmd = Sprintf("position fen %s moves %s\ngo\n", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
 			OutputLN(cmd);
-			NetSendToTCP(ce_channel, cmd);
+			ce.Send(cmd);
+			//NetSendToTCP(ce_channel, cmd);
 			OutputLN("CMD sent");
 			cmdSent = true;
 		}
 
 		if (!cb.isDropping) //wait for the dropping pieces
 		{
-			ce_data = NetReceiveFromTCP(ce_channel);
+			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
-			cb.MakeMovetextMove(ce_data);
+			highlightSquares = cb.MakeMovetextMove(ce_data);
 			cmdSent = false;
 		}
 	}
@@ -541,49 +488,45 @@ function OnFrame()
 	/*Drawing Scene */
 	SceneBegin();
 
-	//DrawGrid([0.5, 0.5, 0.5], 32);
-
-	if(mov_moving)
-		DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5], true);
-	else
-		DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
+		if(mov_moving)
+			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.5, 0.9, 0.5], true);
+		else
+			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
 
 
-	//TODO:remove me
-	//foreach(var p in pieces)
-	//	DrawGroundLine(2, p.GetPosition(), [0.5, 0.9, 0.5]);
+		//TODO:remove me
+		//foreach(var p in pieces)
+		//	DrawGroundLine(2, p.GetPosition(), [0.5, 0.9, 0.5]);
 
-	// TODO: put your drawing code here
+		// TODO: put your drawing code here
 
-	palm.Draw();
+		palm.Draw();
 
-	FillTextureMatrix();
+		FillTextureMatrix();
 
-	//glCullFace(GL_FRONT);
-	glMatrixMode(GL_MODELVIEW);
-	//glCullFace(GL_BACK);
+		//glCullFace(GL_FRONT);
+		glMatrixMode(GL_MODELVIEW);
+		//glCullFace(GL_BACK);
 
-	shader.Start();
-		SetActiveTexture(fbo);
-		shader.SetParameter("shadowMap", 0);
+		shader.Start();
+			SetActiveTexture(fbo);
+			shader.SetParameter("shadowMap", 0);
 
-		cb.DrawPieces();
-		//for(var i = 0; i < 16; i++)
-		//	pieces[i].Draw();
+			cb.DrawPieces();
 
-		f0.Draw();
-		f1.Draw();
+			f0.Draw();
+			f1.Draw();
 
-		o_table.Draw();
-		o_chessboard.Draw();
+			o_table.Draw();
+			o_chessboard.Draw();
 
-	shader.Stop();
+		shader.Stop();
 
-	//shoul be here, ow no alpha :-(
-	//TODO: why?
-	if(legalMoves != null)
-		DrawLegalMoves();
+		//shoul be here, ow no alpha :-(
+		//TODO: why?
+		if(highlightSquares != null)
+			DrawHighlightSquares();
 	SceneEnd();
 }
 
@@ -632,14 +575,15 @@ function DrawGroundLine(size, pos, color, centered)
 	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
 
 	var x, z, c;
+	c = size / 2;
 	//TODO:fix
 	if(centered)
 	{
-	    x = Int((pos[0]+16) / 4) * 4 + 2 - 16;
-	    z = Int((pos[2]+16) / 4) * 4 + 2 - 16 ;
+	    x = Int((pos[0]+c+16) / 4) * 4 + 2 - 16;
+	    z = Int((pos[2]+c+16) / 4) * 4 + 2 - 16 ;
 	}
 
-	c = size / 2;
+
 
 
 
@@ -669,7 +613,7 @@ function DrawGroundLine(size, pos, color, centered)
 	glPopAttrib();
 }
 
-function DrawLegalMoves()
+function DrawHighlightSquares()
 {
 	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
 
@@ -683,7 +627,7 @@ function DrawLegalMoves()
 	glBegin(GL_QUADS);
 		for (var i = 0; i < 63; i++)
 		{
-			if(legalMoves[i] != Void)
+			if(highlightSquares[i] != Void)
 			{
 				//TODO: parametrizzare
 				posX = Int(i/8) * 4 - 16;

@@ -1,3 +1,6 @@
+#ifndef _ANIMATOR
+#define _ANIMATOR
+
 class Animator
 {
     var size;
@@ -5,7 +8,7 @@ class Animator
     var head;
     var tail;
 
-    Add(obj, startPos, endPos, hMax);
+    Add(obj, delay, startPos, endPos, hMax);
     Update();
     CalcParabola(xBegin, xEnd, zBegin, zEnd, yStart, yApex, t);
     CalcY(startingHeight, apexHeight, t);
@@ -21,9 +24,9 @@ function Animator::Animator()
     tail = 0;
 }
 
-function Animator::Add(obj, startPos, endPos, hMax)
+function Animator::Add(obj, delay, startPos, endPos, hMax)
 {
-    objs[tail] = {obj, 0.0, startPos, endPos, hMax};
+    objs[tail] = {obj, delay, startPos, endPos, hMax};
     tail = (tail + 1) % size;
 }
 
@@ -38,10 +41,13 @@ function Animator::Update()
         {
             t = t + 0.01;
             o[1] = t;
-            var newPos = CalcParabola(o[2][0], o[3][0], o[2][2], o[3][2], o[2][1], o[4], t);
-            o[0].obj.SetPosition(newPos);
+            if(t > 0.0)
+            {
+                var newPos = CalcParabola(o[2][0], o[3][0], o[2][2], o[3][2], o[2][1], o[4], t);
+                o[0].obj.SetPosition(newPos);
+            }
         }
-        else
+        else if(i == head)
             head = (head + 1) % size;
 
         i = (i+1) % size;
@@ -73,3 +79,5 @@ function Animator::CalcZ(start, end, t)
     var B = start;
     return A*t + B;
 }
+
+#endif
