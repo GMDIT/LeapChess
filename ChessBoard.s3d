@@ -37,6 +37,7 @@ class ChessBoard
 
     var turn;
     var latestMove;
+    var enPassant;
 
     var anim;
 
@@ -63,6 +64,7 @@ class ChessBoard
     GenerateFENChessboard();
     GenerateMovetext(oldPos, newPos);
     MakeMovetextMove(movetext);
+    SetEnPassant(p, oldPos, newPos);
     CalcNewPos(pos, r, c,  result);
     Conv64ToAH(pos);
     OnFrame();
@@ -285,6 +287,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
             OutputLN(latestMove);
             EndTurn();
         }
+        SetEnPassant(p, oldPos, newPos);
         return true;
     }
 }
@@ -292,6 +295,10 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
 function ChessBoard::EatPieceIn(pos)
 {
     var p = cbMatrix[pos];
+
+    if(enPassant != Void && enPassant[2] == pos)
+        p = enPassant[0];
+
     var c = p.color;
     var e = eatedCounters[c];
 
@@ -401,11 +408,11 @@ function ChessBoard::LegalMoves(p)
                 }
 
                 //left eat
-                if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
                     result[endPos] = true;
 
                 //right eat
-                if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
                     result[endPos] = true;
             }
             else
@@ -421,11 +428,11 @@ function ChessBoard::LegalMoves(p)
                 }
 
                 //left eat
-                if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
                     result[endPos] = true;
 
                 //right eat
-                if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && cbMatrix[endPos] != Void)
+                if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
                     result[endPos] = true;
             }
             return result;
@@ -585,8 +592,12 @@ function ChessBoard::GenerateFENChessboard()
     //no castling;
     string += " -";
 
-    //no en passant target square
-    string += " -";
+    //en passant target square
+    if(enPassant != Void)
+        string += (" " + enPassant[1]);
+    else
+        string += " -";
+
 
     //half move counter
     string += " 0";
@@ -630,13 +641,24 @@ function ChessBoard::MovePieceToPos(p, newPos)
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
         anim.Add(p, 0.0, p.obj.GetPosition(), newPosXY, 30);
 
-        //workaround, TODO: rewrite
-        //p.SetXYPos([corner[0], 15, corner[2]], dimension);
-        //p.isDropping = true;
+        SetEnPassant(p, oldPos, newPos);
 
         latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
         OutputLN(latestMove);
         EndTurn();
+    }
+}
+
+function ChessBoard::SetEnPassant(p, oldPos, newPos)
+{
+    enPassant = Void;
+
+    if(p.type == CP_PAWN)
+    {
+        if(p.color == CP_W && oldPos < 16 && newPos > 23)
+            enPassant = {p, Conv64ToAH(oldPos + 8), oldPos + 8};
+        else if(p.color == CP_B && oldPos > 47 && newPos < 40)
+            enPassant = {p, Conv64ToAH(oldPos - 8), oldPos - 8};
     }
 }
 
