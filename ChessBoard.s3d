@@ -50,12 +50,12 @@ class ChessBoard
     DropToNewPosition(mov_piece, legalMoves);
     FreeMovePiece(id, pos, legalMoves);
     GetPosFromXY(p);
+    GetCenteredPosFromXY(p, dim);
 
     //given the position of the corner, and dimension of the piece, return the
     // 64 position of the center of the piece
-    GetCenteredPosFromXY(p, dim);
-
     //GetPosFrom64(pos);
+
     IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
     MovePieceToPos(piece, pos);
@@ -192,6 +192,7 @@ function ChessBoard::DropPieces()
     isDropping = false;
     for(var i = 0; i<32; i++)
     {
+
         var p = GetPieceFrom32id(i);//i < 16 ? wPieces[i] : bPieces[i-16];
         if(p.isDropping)
         {
@@ -205,8 +206,8 @@ function ChessBoard::DropPieces()
 
             if(p.position != -1) //-1 -> the piece is eated
             {
-                distX = ((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
-                distZ = ((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
+                distX = pos[0] - p.CalcXYPosition(p.position, corner, dimension)[0];//((pos[0]-corner[0]) % cbStep) - p.GetOffSet(dimension);
+                distZ = pos[2] - p.CalcXYPosition(p.position, corner, dimension)[2];//((pos[2]-corner[2]) % cbStep) - p.GetOffSet(dimension);
             }
 
             var decrX = 0.0;

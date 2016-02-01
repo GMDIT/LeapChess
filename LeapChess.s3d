@@ -421,13 +421,14 @@ function OnFrame()
 	}
 	else //cb.turn != playerColor
 	{
+		var cmd;
+
 		if(!cmdSent)
 		{
-			var cmd;
 			if(cb.totalMovesCounter == 1)
-				cmd = Sprintf("position startpos moves %s\ngo\n", cb.latestMove[2]);
+				cmd = Sprintf("position startpos moves %s\ngo", cb.latestMove[2]);
 			else
-				cmd = Sprintf("position fen %s moves %s\ngo\n", cb.GenerateFENChessboard(), cb.latestMove[2]);
+				cmd = Sprintf("position fen %s moves %s\ngo", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
 			OutputLN(cmd);
 			ce.Send(cmd);
@@ -440,6 +441,18 @@ function OnFrame()
 		{
 			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
+
+			/*
+			//resend to engine the move TODO:rewrite
+			if(cb.totalMovesCounter == 1)
+				cmd = Sprintf("position startpos moves %s %s\n", cb.latestMove[2], ce_data);
+			else
+				cmd = Sprintf("position fen %s moves %s %s\n", cb.GenerateFENChessboard(), cb.latestMove[2], ce_data);
+
+			OutputLN(cmd);
+			ce.Send(cmd);
+			*/
+
 			highlightSquares = cb.MakeMovetextMove(ce_data);
 			cmdSent = false;
 		}
