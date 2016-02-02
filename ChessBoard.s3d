@@ -71,6 +71,7 @@ class ChessBoard
     EndTurn();
 
     isCheck(color, checkPos);
+    IsCheckInNewPos(king, newPos);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -281,7 +282,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         p.isDropping = true;
         p.position = newPos;
         OutputLN(p.position);
-        if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
+        //if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
             EatPieceIn(newPos);
         cbMatrix[newPos] = p;
         if(oldPos != newPos)
@@ -301,6 +302,8 @@ function ChessBoard::EatPieceIn(pos)
 
     if(enPassant != Void && enPassant[2] == pos)
         p = enPassant[0];
+    else if(p == Void || p.color == turn)
+        return;
 
     var c = p.color;
     var e = eatedCounters[c];
@@ -531,16 +534,16 @@ function ChessBoard::LegalMoves(p)
             break;
 
         case CP_KING:
-            //TODO:better code... chek if the move put the King under attack
+            //TODO:better code... 
 
-            if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 0, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 0, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 0, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 0, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
             return result;
             break;
     }
@@ -635,7 +638,7 @@ function ChessBoard::MovePieceToPos(p, newPos)
     var oldPos = p.position;
     cbMatrix[p.position] = Void;
     p.position = newPos;
-    if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
+    //if(cbMatrix[newPos] != Void && cbMatrix[newPos].color != p.color)
         EatPieceIn(newPos);
     cbMatrix[newPos] = p;
     if(oldPos != newPos)
@@ -703,6 +706,9 @@ function ChessBoard::IsCheck(color, checkPos)
     for(var i = 0; i < 16; i++)
     {
         var e = enemies[i];
+
+        if(e.type == CP_KING) continue; //the king can't check
+
         if (e.position != -1)
         {
             attackedSquares = LegalMoves(e);
@@ -717,4 +723,31 @@ function ChessBoard::IsCheck(color, checkPos)
     return false;
 }
 
+//TODO: remove FEN control
+function ChessBoard::IsCheckInNewPos(king, newPos)
+{
+    var oldPos = king.position;
+    var oldM = cbMatrix[newPos];
+    var check = false;
+        var oldFen = GenerateFENChessboard();
+    //change the chessboard
+    cbMatrix[oldPos] = Void;
+    cbMatrix[newPos] = king;
+    king.position = newPos;
+    if(oldM != Void)
+        oldM.position = -1;
+
+    var tmp;
+    check = IsCheck(king.color, &tmp);
+
+    //restore chessboard
+    if(oldM != Void)
+        oldM.position = newPos;
+    king.position = oldPos;
+    cbMatrix[newPos] = oldM;
+    cbMatrix[oldPos] = king;
+        var newFen = GenerateFENChessboard();
+        if(oldFen != newFen) OutputLN("!!!!!!!!!!!!!WARNING!!!!!!!!!!\n!!!CHESSBOARD NOT RESTORED !!!!");
+    return check;
+}
 #endif
