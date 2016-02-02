@@ -154,6 +154,7 @@ function OnDownload()
 
 function OnInit(params)
 {
+	SetFrameRate(60);
 		/* initialize camera */
 	CameraGetCurrent().SetPosition(CamPos);
 			//CameraGetCurrent().SetDirection(1, 1, 0);
@@ -302,19 +303,6 @@ function OnInit(params)
 
 function OnFrame()
 {
-	//receive packet
-	//var oldDataValues = {"0", 0,0,0};
-	if(NetDataReady(lm_channel))
-	{
-		var data = "";
-		var recIp = "";
-		data = NetReceiveFrom(lm_channel, &recIP);
-		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
-
-		palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
-		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
-		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
-	}
 
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
@@ -453,7 +441,10 @@ function OnFrame()
 			ce.Send(cmd);
 			*/
 
+			var p;
 			highlightSquares = cb.MakeMovetextMove(ce_data);
+			if(cb.IsCheck(cb.turn, &p))
+				highlightSquares[p] = 2;
 			cmdSent = false;
 		}
 	}
@@ -501,18 +492,9 @@ function OnFrame()
 		else
 			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
-
-
-		//TODO:remove me
-		//foreach(var p in pieces)
-		//	DrawGroundLine(2, p.GetPosition(), [0.5, 0.9, 0.5]);
-
-		// TODO: put your drawing code here
-
 		palm.Draw();
 
 		FillTextureMatrix();
-
 		//glCullFace(GL_FRONT);
 		glMatrixMode(GL_MODELVIEW);
 		//glCullFace(GL_BACK);
@@ -549,7 +531,20 @@ function DownloadReady(RequestID)
 
 function OnTimer()
 {
-	// TODO:
+	//receive packet
+	//var oldDataValues = {"0", 0,0,0};
+	if(NetDataReady(lm_channel))
+	{
+		var data = "";
+		var recIp = "";
+		data = NetReceiveFrom(lm_channel, &recIP);
+		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
+
+		palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
+		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
+		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
+	}
+
 }
 
 
@@ -624,7 +619,7 @@ function DrawHighlightSquares()
 	glLineWidth(1);
 	glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
-
+	var colors = {[0.2,1,0.2,0.4], [0.2,1,0.2,0.9], [1,0.2,0.2,0.9]};
 	glColor([0.2,1,0.2,0.9]);
 
 	var posX, posZ;
@@ -636,6 +631,8 @@ function DrawHighlightSquares()
 				//TODO: parametrizzare
 				posX = Int(i/8) * 4 - 16;
 				posZ = (i%8) * 4 - 16;
+
+				glColor(colors[highlightSquares[i]]);
 
 				glVertex(posX + 0.2, 0.4, posZ + 0.2);
 				glVertex(posX + 0.2, 0.4, posZ + 3.8);
