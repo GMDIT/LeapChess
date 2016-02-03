@@ -55,6 +55,8 @@ class ChessPiece
     var myDim;
     var isDropping;
 
+    var moved; //for castling;
+
     Draw(flag);
     SetXYPos(c, d);
     CalcXYPosition(newPos, c, d);
@@ -67,6 +69,7 @@ function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
     position = pos;
     color = c;
     isDropping = false;
+    moved = false;
 
     switch (t) {
         case CP_PAWN:

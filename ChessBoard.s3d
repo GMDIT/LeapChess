@@ -58,7 +58,7 @@ class ChessBoard
 
     IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
-    MovePieceToPos(piece, pos);
+    MovePieceToPos(piece, pos, endTurn);
     LegalMoves(piece);
     CanMoveTo(color, dest);
     GenerateFENChessboard();
@@ -72,6 +72,8 @@ class ChessBoard
 
     isCheck(color, checkPos);
     IsCheckInNewPos(king, newPos);
+    CastlingStatus();
+    Castle(king, oldPos);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -287,11 +289,16 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         cbMatrix[newPos] = p;
         if(oldPos != newPos)
         {
-            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
+            p.moved = true;
+            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)}; //TODO: check for castling
             OutputLN(latestMove);
+            SetEnPassant(p, oldPos, newPos);
+
+            if(p.type == CP_KING)
+                Castle(p, oldPos);
+
             EndTurn();
         }
-        SetEnPassant(p, oldPos, newPos);
         return true;
     }
 }
@@ -396,6 +403,8 @@ function ChessBoard::LegalMoves(p)
 
     var result = Array(64);
     result[startPos] = 0;
+
+    var tmp;
 
     switch (type)
     {
@@ -534,7 +543,7 @@ function ChessBoard::LegalMoves(p)
             break;
 
         case CP_KING:
-            //TODO:better code... 
+            //TODO:better code...
 
             if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
             if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
@@ -544,6 +553,23 @@ function ChessBoard::LegalMoves(p)
             if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
             if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
             if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+
+
+            //castling
+            tmp = CastlingStatus();
+
+            if(w)
+            {
+                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[0]) result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[1]) result[endPos] = 1;
+            }
+            else
+            {
+                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[2]) result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[3]) result[endPos] = 1;
+            }
+
+
             return result;
             break;
     }
@@ -591,12 +617,21 @@ function ChessBoard::GenerateFENChessboard()
             string += "/";
     }
     if(turn == CP_W)
-        string += " w";
+        string += " w ";
     else
-        string += " b";
+        string += " b ";
 
-    //no castling;
-    string += " -";
+    //castling
+    var cStatus = CastlingStatus();
+    if(!cStatus[0] && !cStatus[1] && !cStatus[2] && !cStatus[3])
+        string += "-";
+    else
+    {
+        if(cStatus[0]) string += "K";
+        if(cStatus[1]) string += "Q";
+        if(cStatus[2]) string += "k";
+        if(cStatus[3]) string += "q";
+    }
 
     //en passant target square
     if(enPassant != Void)
@@ -629,11 +664,11 @@ function ChessBoard::MakeMovetextMove(movetext)
     var endPos = AHto64(movetext[2], val(movetext[3]));
     highlightSquares[startPos] = 1;
     highlightSquares[endPos] = 1;
-    MovePieceToPos(cbMatrix[startPos], endPos);
+    MovePieceToPos(cbMatrix[startPos], endPos, true);
     return highlightSquares;
 }
 
-function ChessBoard::MovePieceToPos(p, newPos)
+function ChessBoard::MovePieceToPos(p, newPos, end)
 {
     var oldPos = p.position;
     cbMatrix[p.position] = Void;
@@ -643,6 +678,8 @@ function ChessBoard::MovePieceToPos(p, newPos)
     cbMatrix[newPos] = p;
     if(oldPos != newPos)
     {
+        p.moved = true;
+
         var oldPosXY = p.CalcXYPosition(oldPos, corner, dimension);
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
         anim.Add(p, 0.0, p.obj.GetPosition(), newPosXY, 30);
@@ -651,7 +688,12 @@ function ChessBoard::MovePieceToPos(p, newPos)
 
         latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
         OutputLN(latestMove);
-        EndTurn();
+
+        if(p.type == CP_KING)
+            Castle(p, oldPos);
+
+        if(end)
+            EndTurn();
     }
 }
 
@@ -723,13 +765,11 @@ function ChessBoard::IsCheck(color, checkPos)
     return false;
 }
 
-//TODO: remove FEN control
 function ChessBoard::IsCheckInNewPos(king, newPos)
 {
     var oldPos = king.position;
     var oldM = cbMatrix[newPos];
     var check = false;
-        var oldFen = GenerateFENChessboard();
     //change the chessboard
     cbMatrix[oldPos] = Void;
     cbMatrix[newPos] = king;
@@ -746,8 +786,70 @@ function ChessBoard::IsCheckInNewPos(king, newPos)
     king.position = oldPos;
     cbMatrix[newPos] = oldM;
     cbMatrix[oldPos] = king;
-        var newFen = GenerateFENChessboard();
-        if(oldFen != newFen) OutputLN("!!!!!!!!!!!!!WARNING!!!!!!!!!!\n!!!CHESSBOARD NOT RESTORED !!!!");
     return check;
 }
+
+
+/***********************+
+K: white, king side, O-O
+Q: white, queem sode, O-O-O
+**************************/
+function ChessBoard::CastlingStatus()
+{
+    //           K    Q     k     q
+    var result = {true, true, true, true};
+
+    var wKing = wPieces[7];
+    var bKing = bPieces[7];
+    var wTQ = wPieces[0];
+    var wTK = wPieces[1];
+    var bTQ = bPieces[0];
+    var bTK = bPieces[1];
+
+    //1.The king and the chosen rook are on the player's first rank.
+    //2.Neither the king nor the chosen rook has previously moved.
+    result[0] = !wKing.moved && !wTK.moved;
+    result[1] = !wKing.moved && !wTQ.moved;
+    result[2] = !bKing.moved && !bTK.moved;
+    result[3] = !bKing.moved && !bTQ.moved;
+
+    //3.There are no pieces between the king and the chosen rook.
+    result[0] = result[0] && cbMatrix[5] == Void && cbMatrix[6] == Void;
+    result[1] = result[1] && cbMatrix[1] == Void && cbMatrix[2] == Void && cbMatrix[3] == Void;
+    result[2] = result[2] && cbMatrix[61] == Void && cbMatrix[62] == Void;
+    result[3] = result[3] && cbMatrix[57] == Void && cbMatrix[58] == Void && cbMatrix[59] == Void;
+
+    //4.The king is not currently in check.
+    var tmp;
+    result[0] = result[0] && !IsCheck(wKing.color, &tmp);
+    result[1] = result[1] && !IsCheck(wKing.color, &tmp);
+    result[2] = result[2] && !IsCheck(bKing.color, &tmp);
+    result[3] = result[3] && !IsCheck(bKing.color, &tmp);
+
+    //5.The king does not pass through a square that is attacked by an enemy piece.
+    //6.The king does not end up in check. (True of any legal move.)
+    result[0] = result[0] && !IsCheckInNewPos(wKing, 5) && !IsCheckInNewPos(wKing, 6);
+    result[1] = result[1] && !IsCheckInNewPos(wKing, 2) && !IsCheckInNewPos(wKing, 3);
+    result[2] = result[2] && !IsCheckInNewPos(bKing, 61) && !IsCheckInNewPos(bKing, 62);
+    result[3] = result[3] && !IsCheckInNewPos(bKing, 58) && !IsCheckInNewPos(bKing, 59);
+
+    return result;
+}
+
+function ChessBoard::Castle(king, oldPos)
+{
+    if(king.type != CP_KING)
+        return;
+
+    var diff = oldPos - king.position;
+    var pieces = king.color == CP_W ? wPieces : bPieces;
+    if(abs(diff) > 1)
+    {
+        if(diff > 0)
+            MovePieceToPos(pieces[0], king.position + 1, false);
+        else
+            MovePieceToPos(pieces[1], king.position - 1, false);
+    }
+}
+
 #endif
