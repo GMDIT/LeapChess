@@ -290,12 +290,13 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         if(oldPos != newPos)
         {
             p.moved = true;
-            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)}; //TODO: check for castling
             OutputLN(latestMove);
             SetEnPassant(p, oldPos, newPos);
 
             if(p.type == CP_KING)
                 Castle(p, oldPos);
+
+            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
 
             EndTurn();
         }
@@ -686,11 +687,12 @@ function ChessBoard::MovePieceToPos(p, newPos, end)
 
         SetEnPassant(p, oldPos, newPos);
 
-        latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
         OutputLN(latestMove);
 
         if(p.type == CP_KING)
             Castle(p, oldPos);
+
+        latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
 
         if(end)
             EndTurn();
