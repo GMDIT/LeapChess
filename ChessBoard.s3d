@@ -845,7 +845,7 @@ function ChessBoard::Castle(king, oldPos)
 
     var diff = oldPos - king.position;
     var pieces = king.color == CP_W ? wPieces : bPieces;
-    if(abs(diff) > 1)
+    if(abs(diff) == 2)
     {
         if(diff > 0)
             MovePieceToPos(pieces[0], king.position + 1, false);
