@@ -389,22 +389,26 @@ function OnFrame()
 			mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
 			mov_moving = true;
 			OutputLN("Star Moving: ", mov_offset, mov_piece);
-			highlightSquares = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+
+			//highlightSquares = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+			cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+			cb.lmm.GetList(&highlightSquares);
 		}
 		else if ((!mov_gripping || !mov_touching) && mov_moving) //stop moving piece
 		{
-			if(cb.DropToNewPosition(mov_piece, highlightSquares))
+			if(cb.DropToNewPosition(mov_piece))
 			{
 				mov_moving = false;
 				mov_piece = -1;
 				highlightSquares = null;
+				cb.lmm.Clear();
 			}
 			else
-				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, highlightSquares);
+				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
 		}
 		else if(mov_moving)
 		{
-			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, highlightSquares);
+			cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset);
 		}
 	}
 	else //cb.turn != playerColor
@@ -442,9 +446,19 @@ function OnFrame()
 			*/
 
 			var p;
+			/*
 			highlightSquares = cb.MakeMovetextMove(ce_data);
 			if(cb.IsCheck(cb.turn, &p))
 				highlightSquares[p] = 2;
+			*/
+			cb.MakeMovetextMove(ce_data);
+			cb.lmm.GetList(&highlightSquares);
+			if(cb.IsCheck(cb.turn, &p))
+				{
+					var d = highlightSquares[1];
+					highlightSquares[0][d] = {p, 2};
+					highlightSquares[1] = d + 1;
+				}
 			cmdSent = false;
 		}
 	}
@@ -623,6 +637,40 @@ function DrawHighlightSquares()
 	glColor([0.2,1,0.2,0.9]);
 
 	var posX, posZ;
+	var squares = highlightSquares[0];
+	var dim = highlightSquares[1];
+	glBegin(GL_QUADS);
+		for (var i = 0; i < dim; i++)
+		{
+			//TODO: parametrizzare
+			posX = Int(squares[i][0]/8) * 4 - 16;
+			posZ = (squares[i][0]%8) * 4 - 16;
+
+			glColor(colors[squares[i][1]]);
+
+			glVertex(posX + 0.2, 0.4, posZ + 0.2);
+			glVertex(posX + 0.2, 0.4, posZ + 3.8);
+			glVertex(posX + 3.8, 0.4, posZ + 3.8);
+			glVertex(posX + 3.8, 0.4, posZ + 0.2);
+		}
+	glEnd();
+	glDisable(GL_BLEND);
+	//polite restoration of previous OpenGL status
+	glPopAttrib();
+}
+
+/*
+function DrawHighlightSquares()
+{
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+
+	glLineWidth(1);
+	glDisable(GL_LIGHTING);
+	glEnable(GL_BLEND);
+	var colors = {[0.2,1,0.2,0.4], [0.2,1,0.2,0.9], [1,0.2,0.2,0.9]};
+	glColor([0.2,1,0.2,0.9]);
+
+	var posX, posZ;
 	glBegin(GL_QUADS);
 		for (var i = 0; i < 63; i++)
 		{
@@ -642,10 +690,10 @@ function DrawHighlightSquares()
 		}
 	glEnd();
 	glDisable(GL_BLEND);
-	/* polite restoration of previous OpenGL status */
+	//polite restoration of previous OpenGL status
 	glPopAttrib();
 }
-
+*/
 function DrawGrid(col, size)
 {
 	/* let's not mess up current OpenGL status */

@@ -1,0 +1,69 @@
+#ifndef _LEGALMOVESMANAGER
+#define _LEGALMOVESMANAGER
+
+class LegalMovesManager
+{
+    var matrix;
+    var list;
+    var dim;
+    var listUpdate;
+
+    Clear();
+    Add(pos, v);
+    GetList(l);
+    GetMatrix(m);
+    ToggleListUpdate();
+};
+
+function LegalMovesManager::LegalMovesManager()
+{
+    matrix = Array(64);
+    list = Array(32);
+    dim = 0;
+    listUpdate = true;
+}
+
+function LegalMovesManager::Clear()
+{
+    matrix = Array(64);
+    list = Array(32);
+    dim = 0;
+}
+
+function LegalMovesManager::Add(pos, v)
+{
+    matrix[pos] = v;
+    if(listUpdate)
+    {
+        list[dim] = {pos, v};
+        dim++;
+    }
+}
+
+function LegalMovesManager::GetList(l)
+{
+    l = {list, dim};
+    if(dim > 0)
+        return true;
+    else
+        return false;
+}
+
+function LegalMovesManager::GetMatrix(m)
+{
+    m = matrix;
+    if(dim > 0)
+        return true;
+    else
+        return false;
+}
+
+function LegalMovesManager::ToggleListUpdate()
+{
+    listUpdate = !listUpdate;
+}
+
+
+
+
+#endif

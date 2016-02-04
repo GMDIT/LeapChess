@@ -3,6 +3,7 @@
 
 #include "ChessPiece.s3d"
 #include "Animator.s3d"
+#include "LegalMovesManager.s3d"
 /*
 —— a  b  c  d  e  f  g  h
 8 ║56 57 58 59 60 61 62 63
@@ -40,6 +41,7 @@ class ChessBoard
     var enPassant;
 
     var anim;
+    var lmm;
 
     Init();
     DrawPieces(flag);
@@ -47,8 +49,8 @@ class ChessBoard
     DropPieces();
     GetPiecePosition(id);
     GetPieceFrom32id(id);
-    DropToNewPosition(mov_piece, legalMoves);
-    FreeMovePiece(id, pos, legalMoves);
+    DropToNewPosition(mov_piece);
+    FreeMovePiece(id, pos);
     GetPosFromXY(p);
     GetCenteredPosFromXY(p, dim);
 
@@ -56,7 +58,7 @@ class ChessBoard
     // 64 position of the center of the piece
     //GetPosFrom64(pos);
 
-    IsValidDropPosition(id, legalMoves);
+    IsValidDropPosition(id);
     EatPieceIn(pos);
     MovePieceToPos(piece, pos, endTurn);
     LegalMoves(piece);
@@ -99,6 +101,7 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
     isDropping = false;
 
     anim = Animator();
+    lmm = LegalMovesManager();
 }
 /*
 —— a  b  c  d  e  f  g  h
@@ -251,10 +254,12 @@ function ChessBoard::DropPieces()
     }
 }
 
-function ChessBoard::IsValidDropPosition(p, legalMoves)
+function ChessBoard::IsValidDropPosition(p)
 {
     //var p = GetPieceFrom32id(id);
     var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
+    var legalMoves = null;
+    lmm.GetMatrix(&legalMoves);
     //var newPos = GetPosFromXY(p.obj.GetPosition());
     if(newPos < 0)
         return false;
@@ -268,7 +273,7 @@ function ChessBoard::IsValidDropPosition(p, legalMoves)
 */
 }
 
-function ChessBoard::DropToNewPosition(id, legalMoves)
+function ChessBoard::DropToNewPosition(id)
 {
     var p = GetPieceFrom32id(id);
     var oldPos = p.position;
@@ -277,7 +282,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
     var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
     //var newPos = GetPosFromXY(p.obj.GetPosition());
 
-    if(!IsValidDropPosition(p, legalMoves))
+    if(!IsValidDropPosition(p))
         return false;
     else
     {
@@ -336,12 +341,12 @@ function ChessBoard::GetPiecePosition(id)
     return p.obj.GetPosition();
 }
 
-function ChessBoard::FreeMovePiece(id, pos, legalMoves)
+function ChessBoard::FreeMovePiece(id, pos)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
     //TODO: fix, if I move a piece below the board...
     p.obj.SetPosition([pos[0], (pos[1]>0? pos[1]: 0), pos[2]]);
-    if(IsValidDropPosition(p, legalMoves))
+    if(IsValidDropPosition(p))
         p.obj.ForceMaterial();
     else
         p.obj.ForceMaterial(xMaterial);
@@ -402,8 +407,9 @@ function ChessBoard::LegalMoves(p)
 
     var w = (color == CP_W);
 
-    var result = Array(64);
-    result[startPos] = 0;
+    //var result = Array(64);
+    lmm.Clear();
+    lmm.Add(startPos,0);//result[startPos] = 0;
 
     var tmp;
 
@@ -415,56 +421,56 @@ function ChessBoard::LegalMoves(p)
                 //forward
                 if(CalcNewPos(startPos, 1, 0, &endPos) && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos)
                 {
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
 
                     //double forward
                     //little pawn, why are you so special?
                     if(startPos < 16 && CalcNewPos(startPos, 2, 0, &endPos) && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
-                        result[endPos] = 1;
+                        lmm.Add(endPos,1);//result[endPos] = 1;
                 }
 
                 //left eat
                 if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
 
                 //right eat
                 if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
             }
             else
             {
                 //forward
                 if(CalcNewPos(startPos, -1, 0, &endPos)  && cbMatrix[endPos] == Void)// && CanMoveTo(color, endPos))
                 {
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
 
                     //double forward
                     if(startPos > 47  && CalcNewPos(startPos, -2, 0, &endPos)  && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos))
-                        result[endPos] = 1;
+                        lmm.Add(endPos,1);//result[endPos] = 1;
                 }
 
                 //left eat
                 if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
 
                 //right eat
                 if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ))
-                    result[endPos] = 1;
+                    lmm.Add(endPos,1);//result[endPos] = 1;
             }
-            return result;
+            return;// result;
             break;
 
         case CP_HORSE:
             //TODO:better code...
-            if(CalcNewPos(startPos, 1, -2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 2, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 2, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -2, 1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -2, -1, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, -2, &endPos) && CanMoveTo(color, endPos)) result[endPos] = 1;
-            return result;
+            if(CalcNewPos(startPos, 1, -2, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 2, -1, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 2, 1, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 2, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 2, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -2, 1, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -2, -1, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, -2, &endPos) && CanMoveTo(color, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            return;// result;
             break;
 
         case CP_BISHOP:
@@ -473,7 +479,7 @@ function ChessBoard::LegalMoves(p)
             //top left
             for(var i = 1; CalcNewPos(startPos, i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -481,7 +487,7 @@ function ChessBoard::LegalMoves(p)
             //top right
             for(var i = 1; CalcNewPos(startPos, i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -489,7 +495,7 @@ function ChessBoard::LegalMoves(p)
             //bottom left
             for(var i = 1; CalcNewPos(startPos, -i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -497,18 +503,18 @@ function ChessBoard::LegalMoves(p)
             //bottom right
             for(var i = 1; CalcNewPos(startPos, -i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
         //don't break or return, we fall down for the others movements shared with rook
         if(type == CP_BISHOP)
-            return result;
+            return;// result;
         case CP_TOWER:
             //left
             for(var i = 1; CalcNewPos(startPos, 0, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -516,7 +522,7 @@ function ChessBoard::LegalMoves(p)
             //right
             for(var i = 1; CalcNewPos(startPos, 0, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -525,7 +531,7 @@ function ChessBoard::LegalMoves(p)
             //up
             for(var i = 1; CalcNewPos(startPos, i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -534,26 +540,26 @@ function ChessBoard::LegalMoves(p)
             //down
             for(var i = 1; CalcNewPos(startPos, -i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                result[endPos] = 1;
+                lmm.Add(endPos,1);//result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
 
 
-            return result;
+            return;// result;
             break;
 
         case CP_KING:
             //TODO:better code...
 
-            if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 0, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 0, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 0, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, 0, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);// result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 0, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) lmm.Add(endPos,1);//result[endPos] = 1;
 
 
             //castling
@@ -561,17 +567,17 @@ function ChessBoard::LegalMoves(p)
 
             if(w)
             {
-                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[0]) result[endPos] = 1;
-                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[1]) result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[0]) lmm.Add(endPos,1);//result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[1]) lmm.Add(endPos,1);//result[endPos] = 1;
             }
             else
             {
-                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[2]) result[endPos] = 1;
-                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[3]) result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, 2, &endPos) && tmp[2]) lmm.Add(endPos,1);//result[endPos] = 1;
+                if(CalcNewPos(startPos, 0, -2, &endPos) && tmp[3]) lmm.Add(endPos,1);//result[endPos] = 1;
             }
 
 
-            return result;
+            return;// result;
             break;
     }
 }
@@ -660,13 +666,16 @@ function ChessBoard::GenerateMovetext(oldPos, newPos)
 
 function ChessBoard::MakeMovetextMove(movetext)
 {
-    var highlightSquares = Array(64);
+    //var highlightSquares = Array(64);
     var startPos = AHto64(movetext[0], val(movetext[1]));
     var endPos = AHto64(movetext[2], val(movetext[3]));
-    highlightSquares[startPos] = 1;
-    highlightSquares[endPos] = 1;
+    //highlightSquares[startPos] = 1;
+    //highlightSquares[endPos] = 1;
     MovePieceToPos(cbMatrix[startPos], endPos, true);
-    return highlightSquares;
+    //return highlightSquares;
+    lmm.Clear();
+    lmm.Add(startPos, 1);
+    lmm.Add(endPos, 1);
 }
 
 function ChessBoard::MovePieceToPos(p, newPos, end)
@@ -755,7 +764,11 @@ function ChessBoard::IsCheck(color, checkPos)
 
         if (e.position != -1)
         {
-            attackedSquares = LegalMoves(e);
+            //attackedSquares = LegalMoves(e);
+            lmm.ToggleListUpdate();
+            LegalMoves(e);
+            lmm.ToggleListUpdate();
+            lmm.GetMatrix(&attackedSquares);
             if(attackedSquares[kingPosition] != Void)
                 {
                     OutputLN("Check by ", e.type, " in ", kingPosition);
@@ -767,27 +780,27 @@ function ChessBoard::IsCheck(color, checkPos)
     return false;
 }
 
-function ChessBoard::IsCheckInNewPos(king, newPos)
+function ChessBoard::IsCheckInNewPos(piece, newPos)
 {
-    var oldPos = king.position;
+    var oldPos = piece.position;
     var oldM = cbMatrix[newPos];
     var check = false;
     //change the chessboard
     cbMatrix[oldPos] = Void;
-    cbMatrix[newPos] = king;
-    king.position = newPos;
+    cbMatrix[newPos] = piece;
+    piece.position = newPos;
     if(oldM != Void)
         oldM.position = -1;
 
     var tmp;
-    check = IsCheck(king.color, &tmp);
+    check = IsCheck(piece.color, &tmp);
 
     //restore chessboard
     if(oldM != Void)
         oldM.position = newPos;
-    king.position = oldPos;
+    piece.position = oldPos;
     cbMatrix[newPos] = oldM;
-    cbMatrix[oldPos] = king;
+    cbMatrix[oldPos] = piece;
     return check;
 }
 
