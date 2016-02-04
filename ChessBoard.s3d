@@ -70,8 +70,9 @@ class ChessBoard
     OnFrame();
     EndTurn();
 
-    isCheck(color, checkPos);
+    IsCheck(color, checkPos);
     IsCheckInNewPos(piece, newPos);
+    IsCheckMate(color);
     CastlingStatus();
     Castle(king, oldPos);
 };
@@ -765,6 +766,34 @@ function ChessBoard::IsCheck(color, checkPos)
         }
     }
     return false;
+}
+
+function ChessBoard::IsCheckMate(color)
+{
+    var tmp = null;
+    if(!IsCheck(color, &tmp))
+        return false;
+
+    var friends = color == CP_W ? bPieces : wPieces;
+    var lglMoves;
+
+    for(var i = 0; i < 16; i++)
+    {
+        var f = friends[i];
+
+        if(f.type == CP_KING) continue; //the king can't check
+
+        if (f.position != -1)
+        {
+            lglMoves = LegalMoves(f);
+            for(var j = 0; j < 64; j++)
+            {
+                if(lglMoves[j] != Void && j != f.position)
+                    return true;
+            }
+        }
+    }
+    return true;
 }
 
 function ChessBoard::IsCheckInNewPos(piece, newPos)

@@ -312,6 +312,12 @@ function OnFrame()
 
 	cb.OnFrame();
 
+	if(false)//cb.IsCheckMate(cb.turn))
+	{
+		OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
+		Sleep(10000);
+	}
+
 	//OutputLN(modulus(f1_pos - f0_pos));
 
 	if(cb.turn == playerColor)
