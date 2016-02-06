@@ -310,8 +310,12 @@ function ChessBoard::EatPieceIn(pos)
     var p = cbMatrix[pos];
 
     if(enPassant != Void && enPassant[2] == pos)
+    {
         p = enPassant[0];
-    else if(p == Void || p.color == turn)
+        cbMatrix[p.position] = Void;
+
+    }
+    else if(p == Void || p.color == turn) //TODO:
         return;
 
     OutputLN("Eating piece, enPassant:", enPassant != Void);
@@ -330,7 +334,7 @@ function ChessBoard::EatPieceIn(pos)
 
     eatedCounters[c] = e+1;
     p.position = -1;
-    cbMatrix[pos] = Void; //if enPassant, the position will not be occupied by the eating piece
+    //cbMatrix[pos] = Void;
 }
 
 function ChessBoard::GetPiecePosition(id)
