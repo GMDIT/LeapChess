@@ -98,7 +98,9 @@ namespace LeapChessTCPBridge
                     Console.WriteLine("leapchess>> {0}", data);
 
                     //send to engine
-                    myStreamWriter.Write(data + "\nd\n");
+                    myStreamWriter.Write(data + "\n");
+                    //start thinking
+                    myStreamWriter.Write("go\nd\n");
                     System.Threading.Thread.Sleep(100);
                     //read engine output
                     o = ReadOutput(myStreamReader);
@@ -112,7 +114,14 @@ namespace LeapChessTCPBridge
 
                     // Send engine output to tcp
                     stream.Write(msg, 0, msg.Length);
-                    Console.WriteLine("Sent: {0}", o);
+                    Console.WriteLine("Sent");//: {0}", o);
+
+                    //Send to engine the bestmove
+                    myStreamWriter.Write(data + " {0}\nd\n", bestmove[1]);
+                    System.Threading.Thread.Sleep(100);
+                    //read engine output
+                    Console.WriteLine("Updated status: {0} {1} d ", data, bestmove[1]);
+                    o = ReadOutput(myStreamReader);
                 }
             }
             catch (Exception e)
