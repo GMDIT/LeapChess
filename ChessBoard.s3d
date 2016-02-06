@@ -59,7 +59,7 @@ class ChessBoard
     IsValidDropPosition(id, legalMoves);
     EatPieceIn(pos);
     MovePieceToPos(piece, pos, endTurn);
-    LegalMoves(piece);
+    LegalMoves(piece, pseudoLegalMoves);
     CanMoveTo(color, dest);
     GenerateFENChessboard();
     GenerateMovetext(oldPos, newPos);
@@ -314,6 +314,7 @@ function ChessBoard::EatPieceIn(pos)
     else if(p == Void || p.color == turn)
         return;
 
+    OutputLN("Eating piece, enPassant:", enPassant != Void);
     var c = p.color;
     var e = eatedCounters[c];
 
@@ -329,6 +330,7 @@ function ChessBoard::EatPieceIn(pos)
 
     eatedCounters[c] = e+1;
     p.position = -1;
+    cbMatrix[pos] = Void; //if enPassant, the position will not be occupied by the eating piece
 }
 
 function ChessBoard::GetPiecePosition(id)
@@ -393,7 +395,7 @@ function ChessBoard::CanMoveTo(color, dest)
         return false;
 }
 
-function ChessBoard::LegalMoves(p)
+function ChessBoard::LegalMoves(p, pseudoLegalMoves)
 {
     var startPos = p.position;
     var endPos = startPos;
@@ -407,6 +409,11 @@ function ChessBoard::LegalMoves(p)
     result[startPos] = 0;
 
     var tmp;
+    if(pseudoLegalMoves == Void)
+    {
+        pseudoLegalMoves = false;
+        OutputLN("WARNING: pseudoLegalMoves is Void");
+    }
 
     switch (type)
     {
@@ -414,42 +421,46 @@ function ChessBoard::LegalMoves(p)
             if(w)
             {
                 //forward
-                if(CalcNewPos(startPos, 1, 0, &endPos) && cbMatrix[endPos] == Void  && !IsCheckInNewPos(p, endPos))//&& CanMoveTo(color, endPos)
+                if(CalcNewPos(startPos, 1, 0, &endPos) && cbMatrix[endPos] == Void)// && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))//&& CanMoveTo(color, endPos)
                 {
-                    result[endPos] = 1;
+                    if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                        result[endPos] = 1;
 
                     //double forward
                     //little pawn, why are you so special?
                     if(startPos < 16 && CalcNewPos(startPos, 2, 0, &endPos) && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos) )// && cbMatrix[endPos-8].color != color)
-                        result[endPos] = 1;
+                        if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                            result[endPos] = 1;
                 }
 
                 //left eat
-                if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ) && !IsCheckInNewPos(p, endPos))
+                if(CalcNewPos(startPos, 1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos)) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))
                     result[endPos] = 1;
 
                 //right eat
-                if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ) && !IsCheckInNewPos(p, endPos))
+                if(CalcNewPos(startPos, 1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos))&& (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))
                     result[endPos] = 1;
             }
             else
             {
                 //forward
-                if(CalcNewPos(startPos, -1, 0, &endPos)  && cbMatrix[endPos] == Void && !IsCheckInNewPos(p, endPos))// && CanMoveTo(color, endPos))
+                if(CalcNewPos(startPos, -1, 0, &endPos)  && cbMatrix[endPos] == Void)// && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))// && CanMoveTo(color, endPos))
                 {
-                    result[endPos] = 1;
+                    if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                        result[endPos] = 1;
 
                     //double forward
                     if(startPos > 47  && CalcNewPos(startPos, -2, 0, &endPos)  && cbMatrix[endPos] == Void)//&& CanMoveTo(color, endPos))
-                        result[endPos] = 1;
+                        if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                            result[endPos] = 1;
                 }
 
                 //left eat
-                if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ) && !IsCheckInNewPos(p, endPos))
+                if(CalcNewPos(startPos, -1, -1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos)) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))
                     result[endPos] = 1;
 
                 //right eat
-                if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos) ) && !IsCheckInNewPos(p, endPos))
+                if(CalcNewPos(startPos, -1, 1, &endPos) && CanMoveTo(color, endPos) && (cbMatrix[endPos] != Void || (enPassant != Void && enPassant[2] == endPos)) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos)))
                     result[endPos] = 1;
             }
             return result;
@@ -457,14 +468,14 @@ function ChessBoard::LegalMoves(p)
 
         case CP_HORSE:
             //TODO:can I test !IsCheckInNewPos(p, endPos) only the first time?
-            if(CalcNewPos(startPos, 1, -2, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 2, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 2, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, 1, 2, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, 2, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -2, 1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -2, -1, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
-            if(CalcNewPos(startPos, -1, -2, &endPos) && CanMoveTo(color, endPos) && !IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, -2, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, 2, -1, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, 2, 1, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, 1, 2, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, 2, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, -2, 1, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, -2, -1, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
+            if(CalcNewPos(startPos, -1, -2, &endPos) && CanMoveTo(color, endPos) && (pseudoLegalMoves || !IsCheckInNewPos(p, endPos))) result[endPos] = 1;
             return result;
             break;
 
@@ -474,7 +485,8 @@ function ChessBoard::LegalMoves(p)
             //top left
             for(var i = 1; CalcNewPos(startPos, i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -482,7 +494,8 @@ function ChessBoard::LegalMoves(p)
             //top right
             for(var i = 1; CalcNewPos(startPos, i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -490,7 +503,8 @@ function ChessBoard::LegalMoves(p)
             //bottom left
             for(var i = 1; CalcNewPos(startPos, -i, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -498,7 +512,8 @@ function ChessBoard::LegalMoves(p)
             //bottom right
             for(var i = 1; CalcNewPos(startPos, -i, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -509,7 +524,8 @@ function ChessBoard::LegalMoves(p)
             //left
             for(var i = 1; CalcNewPos(startPos, 0, -i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -517,7 +533,8 @@ function ChessBoard::LegalMoves(p)
             //right
             for(var i = 1; CalcNewPos(startPos, 0, i, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -526,7 +543,8 @@ function ChessBoard::LegalMoves(p)
             //up
             for(var i = 1; CalcNewPos(startPos, i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -535,7 +553,8 @@ function ChessBoard::LegalMoves(p)
             //down
             for(var i = 1; CalcNewPos(startPos, -i, 0, &endPos) && CanMoveTo(color, endPos); i++)
             {
-                if(!IsCheckInNewPos(p, endPos)) result[endPos] = 1;
+                if(pseudoLegalMoves || !IsCheckInNewPos(p, endPos))
+                    result[endPos] = 1;
                 if(cbMatrix[endPos] != Void && cbMatrix[endPos].color != color)
                     break;//stop at first enemy
             }
@@ -756,10 +775,10 @@ function ChessBoard::IsCheck(color, checkPos)
 
         if (e.position != -1)
         {
-            attackedSquares = LegalMoves(e);
+            attackedSquares = LegalMoves(e, true);
             if(attackedSquares[kingPosition] != Void)
                 {
-                    OutputLN("Check by ", e.type, " in ", kingPosition);
+                    //OutputLN("Check by ", e.type, " in ", kingPosition);
                     checkPos = kingPosition;
                     return true;
                 }
@@ -785,11 +804,11 @@ function ChessBoard::IsCheckMate(color)
 
         if (f.position != -1)
         {
-            lglMoves = LegalMoves(f);
+            lglMoves = LegalMoves(f, true);
             for(var j = 0; j < 64; j++)
             {
                 if(lglMoves[j] != Void && j != f.position)
-                    return true;
+                    return false;
             }
         }
     }

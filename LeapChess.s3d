@@ -312,7 +312,7 @@ function OnFrame()
 
 	cb.OnFrame();
 
-	if(false)//cb.IsCheckMate(cb.turn))
+	if(cb.IsCheckMate(cb.turn))
 	{
 		OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
 		Sleep(10000);
@@ -397,7 +397,7 @@ function OnFrame()
 			mov_offset = f0.GetPosition() - cb.GetPiecePosition(mov_piece);
 			mov_moving = true;
 			OutputLN("Star Moving: ", mov_offset, mov_piece);
-			lglMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece));
+			lglMoves = cb.LegalMoves(cb.GetPieceFrom32id(mov_piece), false);
 			hlList = CompressArray(lglMoves);
 		}
 		else if ((!mov_gripping || !mov_touching) && mov_moving) //stop moving piece
@@ -424,9 +424,9 @@ function OnFrame()
 		if(!cmdSent)
 		{
 			if(cb.totalMovesCounter == 1)
-				cmd = Sprintf("position startpos moves %s\ngo", cb.latestMove[2]);
+				cmd = Sprintf("position startpos moves %s", cb.latestMove[2]);
 			else
-				cmd = Sprintf("position fen %s moves %s\ngo", cb.GenerateFENChessboard(), cb.latestMove[2]);
+				cmd = Sprintf("position fen %s moves %s", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
 			OutputLN(cmd);
 			ce.Send(cmd);
