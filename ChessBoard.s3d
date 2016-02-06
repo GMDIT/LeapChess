@@ -797,18 +797,16 @@ function ChessBoard::IsCheckMate(color)
     if(!IsCheck(color, &tmp))
         return false;
 
-    var friends = color == CP_W ? bPieces : wPieces;
+    var friends = color == CP_W ? wPieces : bPieces;
     var lglMoves;
 
     for(var i = 0; i < 16; i++)
     {
         var f = friends[i];
 
-        if(f.type == CP_KING) continue; //the king can't check
-
         if (f.position != -1)
         {
-            lglMoves = LegalMoves(f, true);
+            lglMoves = LegalMoves(f, false);
             for(var j = 0; j < 64; j++)
             {
                 if(lglMoves[j] != Void && j != f.position)
