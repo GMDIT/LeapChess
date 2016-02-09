@@ -76,6 +76,7 @@ var cb;
 var hlList = null;
 var lglMoves = null;
 var playerColor = CP_W;
+var endGame = false;
 
 var m_chessboard;
 var o_chessboard;
@@ -301,8 +302,6 @@ function OnInit(params)
 	CameraActivate(SCENE_CAMERA);
 }
 
-
-
 function OnFrame()
 {
 
@@ -312,9 +311,15 @@ function OnFrame()
 
 	cb.OnFrame();
 
-	if(cb.IsCheckMate(cb.turn))
+	if(!endGame)
+	{
+		endGame = cb.IsCheckMate(cb.turn);
+		CameraMoveMouse();
+	}
+	else
 	{
 		OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
+		CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
 	}
 
 	//OutputLN(modulus(f1_pos - f0_pos));
@@ -484,7 +489,8 @@ function OnFrame()
 	*/
 
 	/* manage camera */
-	CameraMoveMouse();
+	//CameraMoveMouse();
+
 	//OutputLN(CameraGetPosition());
 	//OutputLN(CameraGetRotationMatrix());
 	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
