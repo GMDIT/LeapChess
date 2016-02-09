@@ -75,6 +75,7 @@ class ChessBoard
     IsCheckMate(color);
     CastlingStatus();
     Castle(king, oldPos);
+    Promotion(p);
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm)
@@ -257,7 +258,7 @@ function ChessBoard::IsValidDropPosition(p, legalMoves)
     //var p = GetPieceFrom32id(id);
     var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
     //var newPos = GetPosFromXY(p.obj.GetPosition());
-    if(newPos < 0)
+    if(newPos < 0 || newPos > 63)
         return false;
     else
         return legalMoves[newPos] != Void;
@@ -296,6 +297,8 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
 
             if(p.type == CP_KING)
                 Castle(p, oldPos);
+            else if(p.type == CP_PAWN)
+                Promotion(p);
 
             latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
 
@@ -684,6 +687,7 @@ function ChessBoard::GenerateMovetext(oldPos, newPos)
 
 function ChessBoard::MakeMovetextMove(movetext)
 {
+    OutputLN("Making move: ", movetext);
     var highlightSquares = Array(64);
     var startPos = AHto64(movetext[0], val(movetext[1]));
     var endPos = AHto64(movetext[2], val(movetext[3]));
@@ -715,6 +719,8 @@ function ChessBoard::MovePieceToPos(p, newPos, end)
 
         if(p.type == CP_KING)
             Castle(p, oldPos);
+        else if(p.type == CP_PAWN)
+            Promotion(p);
 
         latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
 
@@ -902,6 +908,23 @@ function ChessBoard::Castle(king, oldPos)
         else
             MovePieceToPos(pieces[1], king.position - 1, false);
     }
+}
+
+function ChessBoard::Promotion(p)
+{
+    if(p.type != CP_PAWN)
+        return;
+
+    if(p.color == CP_W && p.position > 55)
+    {
+        p = ChessPiece(CP_QUEEN, p.position, CP_W, wMaterial);
+    }
+    else if (p.color == CP_B && p.position < 8)
+    {
+        p = ChessPiece(CP_QUEEN, p.position, CP_B, BMaterial);
+    }
+
+    p.SetXYPos(corner, dimension);
 }
 
 #endif
