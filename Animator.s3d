@@ -46,6 +46,12 @@ function Animator::Update()
                 var newPos = CalcParabola(o[2][0], o[3][0], o[2][2], o[3][2], o[2][1], o[4], t);
                 o[0].obj.SetPosition(newPos);
             }
+
+            if(t > 0.8)
+            {
+                o[0].Promote();
+                OutputLN("Promoting!!!");
+            }
         }
         else if(i == head)
             head = (head + 1) % size;

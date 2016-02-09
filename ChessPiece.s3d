@@ -51,6 +51,7 @@ class ChessPiece
     var position;
     var color;
     var obj;
+    var material;
 
     var myDim;
     var isDropping;
@@ -61,6 +62,7 @@ class ChessPiece
     SetXYPos(c, d);
     CalcXYPosition(newPos, c, d);
     GetOffSet(d);
+    Promote();
 };
 
 function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
@@ -68,6 +70,7 @@ function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
     type = t;
     position = pos;
     color = c;
+    material = mat;
     isDropping = false;
     moved = false;
 
@@ -134,6 +137,22 @@ function ChessPiece::GetOffSet(d)
     var offset = (step - myDim) / 2;
 
     return offset;
+}
+
+//TODO: update in time the info for StockFish
+function ChessPiece::Promote()
+{
+    if(type != CP_PAWN || position == -1)
+        return;
+
+    if((color == CP_W && position > 55) || (color == CP_B && position < 8))
+    {
+        var pos = obj.GetPosition();
+        obj = createQueen(material);
+        obj.SetPosition(pos);
+        myDim = 2;
+        type = CP_QUEEN;
+    }
 }
 
 #endif

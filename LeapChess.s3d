@@ -438,9 +438,9 @@ function OnFrame()
 			OutputLN("CMD sent");
 			cmdSent = true;
 		}
-
-		if (!cb.isDropping) //wait for the dropping pieces
+		else if (!cb.isDropping) //wait for the dropping pieces
 		{
+			//Sleep(1000);
 			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
 
