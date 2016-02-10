@@ -5,6 +5,7 @@
 #include "ChessPiece.s3d"
 #include "ChessBoard.s3d"
 #include "ChessEngine.s3d"
+#include "Materials.s3d"
 
 
 /* Set global scene parameters */
@@ -22,7 +23,7 @@ var res_y = 900;
 
 // TODO: put your global variables here
 /*ChessEngine server data */
-var ce_channel;
+//var ce_channel;
 var ce_data;
 var ce;
 
@@ -37,36 +38,30 @@ var gripDistance = 2.5;
 /*tracked fingers */
 var palm;
 var palm_pos = [10,20.0,0.0];
-var palm_mat;
 
 var f0;
 var f0_pos = [10,20.0,0.0];
-var f0_mat;
 
 var f1;
 var f1_pos = [20,20.0,0.0];
-var f1_mat;
 
 var reduction_factor = 10;
 
-/*Colors & mat */
-var m_white;
-var m_black;
-var m_hl;
+/*
 var c_white = [1, 1, 1];
 var c_red = [1, 0, 0];
 var c_blue =[0, 0, 1];
 var c_green = [0, 1, 0];
 var c_yellow = [0,1,1];
+*/
 
-/*3d Objects */
+/*3d Objects
 var m_ball, o_ball;				// mesh e obj per il pallone
 var pos_ball    = [2.0,0.0,0.0];	// posizione iniziale della palla
 var o_ball_padre;				// nodo padre per ball, per la creazione di una gerarchia
 var trigger_ball_rotate = false;
 var trigger_ball_padre_rotate = false;
-var mat;
-
+*/
 
 /*chessboard */
 //var pieces = Array(16);
@@ -98,8 +93,7 @@ var cmdSent = false;
 
 /*Procedural Objects */
 var sphere;
-var box;
-var box_pos;
+
 
 /* Camera globals */
 var CamPos = [0, 45.0, 45.0];	// camera position
@@ -193,11 +187,6 @@ function OnInit(params)
 	/*Connecting to Chess Engine Server*/
 	ce = ChessEngine(ENGINE_PORT);
 	ce.Connect();
-	/*
-	ce_channel = NetConnectTCP("localhost", ENGINE_PORT);
-	if(ce_channel == 0)
-		OutputLN("Error: impossible to connect to Chess Engine");
-	*/
 
 	/*Connectin to LeapMotionServer */
 	lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
@@ -205,74 +194,25 @@ function OnInit(params)
 
 	/*Init fingers */
 
-	// Creazione nuovo materiale
-	m_white = CVmMaterial();
-	m_white.ambient   = [0.5, 0.5, 0.5, 1.0]; //white
-	m_white.diffuse   = [0.9, 0.9, 0.9, 1.0];
-	m_white.specular  = [0.1, 0.1, 0.1, 0.5];
-	m_white.shininess = 0;
-
-	//m_white.SetTexture(CVmTexture("w_wood.jpg", NULL),0);
-
-	m_black = CVmMaterial();
-	m_black.ambient   = [0.1, 0.1, 0.1, 1.0]; //black
-	m_black.diffuse   = [0.1, 0.1, 0.1, 1.0];
-	m_black.specular  = [0.2, 0.1, 0.1, 0.5];
-	//m_black.emission = [1.0, 1.0, 0, 1];
-	m_black.shininess = 128;
-	//m_black.transparency = 0.5;
-
-	m_hl = CVmMaterial();
-	m_hl.ambient   = [0.5, 0.5, 0.5, 1.0]; //yellow
-	m_hl.diffuse   = [1, 1, 0.1, 1.0];
-	m_hl.specular  = [0.1, 0.1, 0.1, 0.5];
-	m_hl.emission = [0.5, 0.5, 0.5];
-	m_hl.shininess = 0;
-
-	mat = CVmMaterial();
-	mat.ambient   = [0.0, 0.0, 0.2, 1.0]; //blue
-	mat.diffuse   = [0.0, 0.0, 1.0, 1.0];
-	mat.specular  = [0.1, 0.1, 0.1, 1.0];
-	mat.shininess = 10;
-
-	//palm.ForceMaterial(mat);
-	//palm.ModulateMaterials(c_blue);
-
-	f0_mat = CVmMaterial();
-	f0_mat.ambient   = [0.0, 0.2, 0.0, 1.0]; //green
-	f0_mat.diffuse   = [0.0, 1.0, 0.0, 1.0];
-	f0_mat.specular  = [0.1, 0.1, 0.1, 1.0];
-	f0_mat.shininess = 7;
-	//f0.ForceMaterial(f0_mat);
-	//f0.ModulateMaterials(c_green);
-
-	f1_mat = CVmMaterial();
-	f1_mat.ambient   = [0.2, 0.0, 0.0, 1.0]; //red
-	f1_mat.diffuse   = [1.0, 0.0, 0.0, 1.0];
-	f1_mat.specular  = [0.1, 0.1, 0.1, 1.0];
-	f1_mat.shininess = 7;
-	//f1.ModulateMaterials(c_red);
-
-
 	/*Generating the sphere */
 	var num_seg = 10;
 	var radius = 0.7;
 	var hemisphere = 1;  //0.5= hemisphere, 1= sphere
 	var sphere_mesh = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
-	sphere_mesh.SetMaterial(mat);
+	sphere_mesh.SetMaterial(MGetBlue());
 	palm = CVmObj();
 	palm.LinkToMesh(sphere_mesh);
 
 
 	var sphere_mesh_1 = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
 	sphere_mesh_1.CenterBoundingBox();
-	sphere_mesh_1.SetMaterial(f0_mat);
+	sphere_mesh_1.SetMaterial(MGetGreen());
 	f0 = CVmObj(sphere_mesh_1);
 	//f0.LinkToMesh(sphere_mesh_1);
 
 	var sphere_mesh_2 = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
 	sphere_mesh_2.CenterBoundingBox();
-	sphere_mesh_2.SetMaterial(f1_mat);
+	sphere_mesh_2.SetMaterial(MGetRed());
 	f1 = CVmObj(sphere_mesh_2);
 	//f1.LinkToMesh(sphere_mesh_2);
 
@@ -291,7 +231,7 @@ function OnInit(params)
 	o_table.Normalize(50);
 	o_table.SetPosition([0,-20,0]);
 
-	cb = ChessBoard([-16,0,-16], 32, m_white, m_black);
+	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack());
 	cb.Init();
 	//OutputLN(cb.GenerateFENChessboard(CP_W));
 
@@ -304,6 +244,9 @@ function OnInit(params)
 
 function OnFrame()
 {
+	/******************
+	*      UPDATE     *
+	*******************/
 
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
@@ -329,8 +272,8 @@ function OnFrame()
 		//Check if gripping
 		if(modulus(f1_pos - f0_pos) < gripDistance)
 		{
-			f0.forceMaterial(mat);
-			f1.forceMaterial(mat);
+			f0.forceMaterial(MGetBlue());
+			f1.forceMaterial(MGetBlue());
 			mov_gripping = true;
 		}
 		else
@@ -444,17 +387,6 @@ function OnFrame()
 			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
 
-			/*
-			//resend to engine the move TODO:rewrite
-			if(cb.totalMovesCounter == 1)
-				cmd = Sprintf("position startpos moves %s %s\n", cb.latestMove[2], ce_data);
-			else
-				cmd = Sprintf("position fen %s moves %s %s\n", cb.GenerateFENChessboard(), cb.latestMove[2], ce_data);
-
-			OutputLN(cmd);
-			ce.Send(cmd);
-			*/
-
 			var p;
 			lglMoves = cb.MakeMovetextMove(ce_data);
 			if(cb.IsCheck(cb.turn, &p))
@@ -495,7 +427,12 @@ function OnFrame()
 	//OutputLN(CameraGetRotationMatrix());
 	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
 
-	//sm
+
+	/******************
+	*      DRAW       *
+	*******************/
+
+	//Shadow Mapping
 	RenderOnTexture();
 	CameraActivate(SCENE_CAMERA);
 
@@ -548,7 +485,6 @@ function DownloadReady(RequestID)
 function OnTimer()
 {
 	//receive packet
-	//var oldDataValues = {"0", 0,0,0};
 	if(NetDataReady(lm_channel))
 	{
 		var data = "";
@@ -583,9 +519,7 @@ function OnExit()
 // Camera manager (using mouse)
 function CameraMoveMouse()
 {
-
 	CameraMoveMouse_Target();
-
 }
 
 function DrawGroundLine(size, pos, color, centered)

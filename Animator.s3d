@@ -50,7 +50,7 @@ function Animator::Update()
             if(t > 0.8)
             {
                 o[0].Promote();
-                OutputLN("Promoting!!!");
+                //OutputLN("Promoting!!!");
             }
         }
         else if(i == head)

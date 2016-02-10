@@ -1,0 +1,104 @@
+#ifndef _MATERIALS
+#define _MATERIALS
+
+/*Colors & mat */
+var m_white = null;
+var m_black = null;
+var m_red = null;
+var m_green = null;
+var m_blue = null;
+var m_hl = null;
+
+function MGetWhite()
+{
+    if(m_white == null)
+    {
+        m_white = CVmMaterial();
+    	m_white.ambient   = [0.5, 0.5, 0.5, 1.0]; //white
+    	m_white.diffuse   = [0.9, 0.9, 0.9, 1.0];
+    	m_white.specular  = [0.1, 0.1, 0.1, 0.5];
+    	m_white.shininess = 0;
+        //m_white.SetTexture(CVmTexture("w_wood.jpg", NULL),0);
+    }
+
+    return m_white;
+}
+
+function MGetBlack()
+{
+    if(m_black == null)
+    {
+        m_black = CVmMaterial();
+    	m_black.ambient   = [0.1, 0.1, 0.1, 1.0]; //black
+    	m_black.diffuse   = [0.1, 0.1, 0.1, 1.0];
+    	m_black.specular  = [0.2, 0.1, 0.1, 0.5];
+    	//m_black.emission = [1.0, 1.0, 0, 1];
+    	m_black.shininess = 128;
+    	//m_black.transparency = 0.5;
+    }
+
+    return m_black;
+}
+
+function MGetHl()
+{
+    if(m_hl == null)
+    {
+        m_hl = CVmMaterial();
+    	m_hl.ambient   = [0.5, 0.5, 0.5, 1.0]; //yellow
+    	m_hl.diffuse   = [1, 1, 0.1, 1.0];
+    	m_hl.specular  = [0.1, 0.1, 0.1, 0.5];
+    	m_hl.emission = [0.5, 0.5, 0.5];
+    	m_hl.shininess = 0;
+    }
+
+    return m_hl;
+}
+
+function MGetBlue()
+{
+    if(m_blue == null)
+    {
+        m_blue = CVmMaterial();
+    	m_blue.ambient   = [0.0, 0.0, 0.2, 1.0]; //blue
+    	m_blue.diffuse   = [0.0, 0.0, 1.0, 1.0];
+    	m_blue.specular  = [0.1, 0.1, 0.1, 1.0];
+    	m_blue.shininess = 10;
+
+        //palm.ForceMaterial(mat);
+    	//palm.ModulateMaterials(c_blue);
+    }
+    return m_blue;
+}
+
+function MGetGreen()
+{
+    if(m_green == null)
+    {
+        m_green = CVmMaterial();
+    	m_green.ambient   = [0.0, 0.2, 0.0, 1.0]; //green
+    	m_green.diffuse   = [0.0, 1.0, 0.0, 1.0];
+    	m_green.specular  = [0.1, 0.1, 0.1, 1.0];
+    	m_green.shininess = 7;
+    	//f0.ForceMaterial(f0_mat);
+    	//f0.ModulateMaterials(c_green);
+    }
+    return m_green;
+}
+
+function MGetRed()
+{
+    if(m_red == null)
+    {
+        m_red = CVmMaterial();
+    	m_red.ambient   = [0.2, 0.0, 0.0, 1.0]; //red
+    	m_red.diffuse   = [1.0, 0.0, 0.0, 1.0];
+    	m_red.specular  = [0.1, 0.1, 0.1, 1.0];
+    	m_red.shininess = 7;
+    	//f1.ModulateMaterials(c_red);
+    }
+
+    return m_red;
+}
+
+#endif
