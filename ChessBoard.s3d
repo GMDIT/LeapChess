@@ -250,7 +250,8 @@ function ChessBoard::DropPieces()
                 if(distY < 1)
                     p.Promote();
 			}
-			else
+
+            if(distX + distY + distZ == 0)
             {
                 p.isDropping = false;
                 p.Promote(); //if I don't rise enough the piece....
@@ -349,7 +350,7 @@ function ChessBoard::FreeMovePiece(id, pos, legalMoves)
 {
     var p = GetPieceFrom32id(id); //id < 16 ? wPieces[id] : bPieces[id - 16];
     //TODO: fix, if I move a piece below the board...
-    p.obj.SetPosition([pos[0], (pos[1]>0? pos[1]: 0), pos[2]]);
+    p.obj.SetPosition([pos[0], (pos[1]>0.1? pos[1]: 0.1), pos[2]]);
     if(IsValidDropPosition(p, legalMoves))
         p.obj.ForceMaterial();
     else
