@@ -220,7 +220,7 @@ function OnInit(params)
 	m_chessboard.CenterBoundingBox();
 	o_chessboard = CVmObj(m_chessboard);
 	o_chessboard.Normalize(32);
-	o_chessboard.SetPosition([0,0,0]);
+	o_chessboard.SetPosition([0,-0.3,0]);
 	o_chessboard.Rotate(90, 0, 1, 0);
 
 	//m_table = CVMNewMesh("woodenRoundTable.aam");
@@ -584,10 +584,10 @@ function DrawHighlightSquares()
 
 			glColor(colors[hlSquares[i][1]]);
 
-			glVertex(posX + 0.2, 0.4, posZ + 0.2);
-			glVertex(posX + 0.2, 0.4, posZ + 3.8);
-			glVertex(posX + 3.8, 0.4, posZ + 3.8);
-			glVertex(posX + 3.8, 0.4, posZ + 0.2);
+			glVertex(posX + 0.2, 0.2, posZ + 0.2);
+			glVertex(posX + 0.2, 0.2, posZ + 3.8);
+			glVertex(posX + 3.8, 0.2, posZ + 3.8);
+			glVertex(posX + 3.8, 0.2, posZ + 0.2);
 		}
 	glEnd();
 	glDisable(GL_BLEND);
