@@ -237,11 +237,14 @@ function ChessBoard::DropPieces()
 
             if(distY > 0)
 			{
-				if(0.1 < distY)
-					decrY = distY/drop_step;
-				else
-					decrY = distY;
-
+                var th = 0.06;
+                decrY  = distY/drop_step;
+                if(decrY < th)
+                    decrY = th < distY ? th : distY;
+                /*
+                if(0.1 < distY) decrY = distY/drop_step;
+				else decrY = distY;
+                */
                 isDropping = true;
 
                 if(distY < 1)
@@ -260,19 +263,12 @@ function ChessBoard::DropPieces()
 
 function ChessBoard::IsValidDropPosition(p, legalMoves)
 {
-    //var p = GetPieceFrom32id(id);
     var newPos = GetCenteredPosFromXY(p.obj.GetPosition(), p.myDim);
     //var newPos = GetPosFromXY(p.obj.GetPosition());
     if(newPos < 0 || newPos > 63)
         return false;
     else
         return legalMoves[newPos] != Void;
-/*
-    if(p.position == newPos || cbMatrix[newPos] == Void || cbMatrix[newPos].color != p.color)
-        return true;
-    else
-        return false;
-*/
 }
 
 function ChessBoard::DropToNewPosition(id, legalMoves)
