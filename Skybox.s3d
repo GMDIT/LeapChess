@@ -1,0 +1,295 @@
+#ifndef _SKYBOX
+#define _SKYBOX
+
+#include <Script3d.h>
+
+// skyBox shader definition
+var vertexSkyBox = "\
+uniform vec3 camPos;\
+varying vec3 vTexCoord;\
+\
+void main(void){\
+	vTexCoord = gl_Vertex.xyz;\
+	gl_Vertex.xyz += camPos;\
+	gl_Position = ftransform();\
+}";
+
+var fragmentSkyBox = "\
+uniform samplerCube Env;\
+varying vec3 vTexCoord;\
+\
+void main(void){\
+	gl_FragColor = vec4(textureCube(Env, normalize(vTexCoord)).rgb, 1.0);\
+}";
+
+// crome shader definition
+var vertexCrome = "\
+varying vec3  Normal;\
+varying vec3  EyeDir;\
+\
+void main(void){\
+	gl_Position    = ftransform();\
+	Normal         = normalize(gl_NormalMatrix * gl_Normal);\
+	EyeDir         = (gl_ModelViewMatrix * gl_Vertex).xyz;\
+}";
+
+var fragmentCrome = "\
+uniform samplerCube Env;\
+\
+varying vec3  Normal;\
+varying vec3  EyeDir;\
+\
+void main(void){\
+	vec3 reflectDir = reflect(EyeDir, normalize(Normal));\
+	gl_FragColor = vec4(textureCube(Env, reflectDir).rgb, 1.0);\
+}";
+
+// cubeDiffuse shader definition
+var vertexDiffuse = "\
+varying vec3  Normal;\
+\
+void main(void){\
+	gl_Position    = ftransform();\
+	Normal         = gl_Normal;\
+}";
+
+var fragmentDiffuse = "\
+uniform samplerCube Env;\
+\
+varying vec3  Normal;\
+\
+void main(void){\
+	gl_FragColor = vec4(textureCube(Env, normalize(Normal)).rgb, 1.0);\
+}";
+
+//meshes
+var g_mCube;
+//shaders
+var g_cromeShader;
+var g_cubemapDiffusive;
+var g_skyBox;
+//textures
+var g_tSky;
+var g_tDiffuse;
+
+var g_glLib;
+#define GL_TEXTURE_CUBE_MAP 0x8513
+
+
+function InitSkybox(params){
+	setlocalDir();
+
+	g_tSky = CVmTexture("Sky128.dds");
+	g_mCube = CVmNewMesh(VRP_BOX, 1, [-10, -10, -10], [10, 10, 10]);
+	g_mCube.scale(1.0, 1.0, -1.0);	// flip the normals
+
+	g_skyBox = CVmShaderProgram(vertexSkyBox, fragmentSkyBox, true);
+	g_skyBox.start();
+		g_skyBox.setParameter("Env", 0);
+	g_skyBox.stop();
+
+	g_cromeShader = CVmShaderProgram(vertexCrome, fragmentCrome, true);
+	g_cromeShader.start();
+		g_cromeShader.setParameter("Env", 0);
+	g_cromeShader.stop();
+
+	g_cubemapDiffusive = CVmShaderProgram(vertexDiffuse, fragmentDiffuse, true);
+	g_cubemapDiffusive.start();
+		g_cubemapDiffusive.setParameter("Env", 0);
+	g_cubemapDiffusive.stop();
+}
+
+function Skybox(){
+	var cPos = CameraGetPosition();
+	sceneBegin();
+	setActiveTexture(g_tSky, VR_NO_FILTER, 0);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	g_skyBox.start();
+		g_skyBox.setParameter("camPos", cPos);
+		g_mCube.draw();
+	g_skyBox.stop();
+
+	glDisable(GL_TEXTURE_CUBE_MAP);
+	sceneEnd();
+}
+
+/***************************************************************
+*                alternative method                            *
+***************************************************************/
+var skyboxTextures;
+
+function LoadSkyboxTextures()
+{
+
+	skyboxTextures = Array(6);
+
+	var texName;
+
+	texName = "skybox\\front.jpg";
+	//texName = "skybox\\right.jpg";
+	skyboxTextures[0] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[0].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+	texName = "skybox\\left.jpg";
+	//texName = "skybox\\front.jpg";
+	skyboxTextures[1] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[1].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+	texName = "skybox\\back.jpg";
+	//texName = "skybox\\left.jpg";
+	skyboxTextures[2] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[2].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+
+	texName = "skybox\\right.jpg";
+	//texName = "skybox\\back.jpg";
+	skyboxTextures[3] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[3].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+
+	texName = "skybox\\top.jpg";
+	skyboxTextures[4] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[4].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+	texName = "skybox\\bottom.jpg";
+	skyboxTextures[5] = CVmTexture(texName);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextures[5].id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+}
+
+
+
+
+
+function RenderSkybox()
+{
+
+	var dir = CameraGetCurrent().GetDirection();
+	var SKY_C = 1.5;
+
+	// Store the current matrix
+   glPushMatrix();
+   glLoadIdentity();
+   gluLookAt(
+        0,0,0,
+        dir[0], dir[1], dir[2],
+        0, 1, 0);
+
+   // Enable/Disable features
+   //glPushAttrib(GL_ENABLE_BIT);
+
+   //glEnable(GL_TEXTURE_2D);
+
+   glDisable(GL_DEPTH_TEST);
+
+   //glDisable(GL_LIGHTING);
+   //glDisable(GL_BLEND);
+
+   // Just in case we set all vertices to white.
+   glColor(1,1,1,1);
+
+   // Render the front quad
+   SetActiveTexture(skyboxTextures[0]);
+   glBindTexture(GL_TEXTURE_2D, skyboxTextures[0].id);
+   glBegin(GL_QUADS);
+        glTexCoord(1, 1); glVertex( -SKY_C, -SKY_C, -SKY_C );
+        glTexCoord(0, 1); glVertex(  SKY_C, -SKY_C, -SKY_C );
+        glTexCoord(0, 0); glVertex(  SKY_C,  SKY_C, -SKY_C );
+        glTexCoord(1, 0); glVertex( -SKY_C,  SKY_C, -SKY_C );
+   glEnd();
+
+   // Render the left quad
+   SetActiveTexture(skyboxTextures[1]);
+   glBindTexture(GL_TEXTURE_2D, skyboxTextures[1].id);
+   glBegin(GL_QUADS);
+       glTexCoord(0, 1); glVertex( -SKY_C, -SKY_C, -SKY_C );
+       glTexCoord(0, 0); glVertex( -SKY_C,  SKY_C, -SKY_C );
+       glTexCoord(1, 0); glVertex( -SKY_C,  SKY_C,  SKY_C );
+       glTexCoord(1, 1); glVertex( -SKY_C, -SKY_C,  SKY_C );
+   glEnd();
+
+
+   // Render the right quad
+   SetActiveTexture(skyboxTextures[3]);
+   glBindTexture(GL_TEXTURE_2D, skyboxTextures[3].id);
+   glBegin(GL_QUADS);
+       glTexCoord(0, 1); glVertex(  SKY_C, -SKY_C,  SKY_C );
+       glTexCoord(0, 0); glVertex(  SKY_C,  SKY_C,  SKY_C );
+       glTexCoord(1, 0); glVertex(  SKY_C,  SKY_C, -SKY_C );
+       glTexCoord(1, 1); glVertex(  SKY_C, -SKY_C, -SKY_C );
+   glEnd();
+
+
+   // Render the back quad
+   SetActiveTexture(skyboxTextures[2]);
+   glBindTexture(GL_TEXTURE_2D, skyboxTextures[2].id);
+   glBegin(GL_QUADS);
+        glTexCoord(0, 1); glVertex( -SKY_C, -SKY_C,  SKY_C );
+        glTexCoord(0, 0); glVertex( -SKY_C,  SKY_C,  SKY_C );
+        glTexCoord(1, 0); glVertex(  SKY_C,  SKY_C,  SKY_C );
+        glTexCoord(1, 1); glVertex(  SKY_C, -SKY_C,  SKY_C );
+   glEnd();
+
+   // Render the top quad
+   SetActiveTexture(skyboxTextures[4]);
+   glBindTexture(GL_TEXTURE_2D, skyboxTextures[4].id);
+    glBegin(GL_QUADS);
+        glTexCoord(1, 0); glVertex( -SKY_C,  SKY_C, -SKY_C );
+        glTexCoord(1, 1); glVertex(  SKY_C,  SKY_C, -SKY_C );
+        glTexCoord(0, 1); glVertex(  SKY_C,  SKY_C,  SKY_C );
+        glTexCoord(0, 0); glVertex( -SKY_C,  SKY_C,  SKY_C );
+   glEnd();
+
+    // Render the bottom quad
+	SetActiveTexture(skyboxTextures[5]);
+    glBindTexture(GL_TEXTURE_2D, skyboxTextures[5].id);
+    glBegin(GL_QUADS);
+        glTexCoord(1, 1); glVertex( -SKY_C, -SKY_C, -SKY_C );
+        glTexCoord(0, 1); glVertex( -SKY_C, -SKY_C,  SKY_C );
+        glTexCoord(0, 0); glVertex(  SKY_C, -SKY_C,  SKY_C );
+        glTexCoord(1, 0); glVertex(  SKY_C, -SKY_C, -SKY_C );
+    glEnd();
+
+   // Restore enable bits and matrix
+   //glPopAttrib();
+
+   glEnable(GL_DEPTH_TEST);
+
+   //glEnable(GL_LIGHTING);
+   //glEnable(GL_BLEND);
+
+   //glDepthFunc(GL_LEQUAL);
+
+   glPopMatrix();
+}
+
+
+
+
+#endif
