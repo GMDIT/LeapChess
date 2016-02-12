@@ -481,14 +481,10 @@ function OnFrame()
 	SceneEnd();
 }
 
-
-
 function DownloadReady(RequestID)
 {
 	// TODO
 }
-
-
 
 function OnTimer()
 {
