@@ -6,6 +6,7 @@
 #include "ChessBoard.s3d"
 #include "ChessEngine.s3d"
 #include "Materials.s3d"
+#include "Skybox.s3d"
 
 
 /* Set global scene parameters */
@@ -140,9 +141,10 @@ function OnDownload()
 	// TODO: download your resources here
 	// E.g.: FileDownload("resource.ext");
 
-	FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
+	//FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
 	FileDownload("chessSet.zip");
 	FileDownload("textures.zip");
+	FileDownload("g_lowres_skybox.zip");
 
 	FileDownload(shader_name);
 }
@@ -152,6 +154,8 @@ function OnDownload()
 function OnInit(params)
 {
 	SetFrameRate(60);
+	SetAmbientLight(0.2,0.2,0.1);
+
 		/* initialize camera */
 	CameraGetCurrent().SetPosition(CamPos);
 			//CameraGetCurrent().SetDirection(1, 1, 0);
@@ -240,6 +244,8 @@ function OnInit(params)
 	CameraSetTarget([0, 0, 0]);
 
 	CameraActivate(SCENE_CAMERA);
+
+	LoadSkyboxTextures();
 }
 
 function OnFrame()
@@ -439,6 +445,7 @@ function OnFrame()
 
 	/*Drawing Scene */
 	SceneBegin();
+		RenderSkybox();
 
 		if(mov_moving)
 			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
@@ -470,6 +477,7 @@ function OnFrame()
 		//TODO: why?
 		if(hlList != null)
 			DrawHighlightSquares();
+
 	SceneEnd();
 }
 
