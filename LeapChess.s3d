@@ -7,6 +7,7 @@
 #include "ChessEngine.s3d"
 #include "Materials.s3d"
 #include "Skybox.s3d"
+#include "LeapMotion.s3d"
 
 
 /* Set global scene parameters */
@@ -29,10 +30,8 @@ var ce_data;
 var ce;
 
 /* LeapMotion Data */
-var lm_channel;
+var lm;
 var localhost;
-var dataValues = {"0",0,0,0, 0,0,0 ,0,0,0};
-//				handID, palmX, palmY, palmZ, f0X, ... f1X...
 
 var gripDistance = 2.5;
 
@@ -45,10 +44,6 @@ var f0_pos = [10,20.0,0.0];
 
 var f1;
 var f1_pos = [20,20.0,0.0];
-
-var reduction_factor = 10;
-
-
 
 /*chessboard */
 var cb;
@@ -173,8 +168,10 @@ function OnInit(params)
 	ce.Connect();
 
 	/*Connectin to LeapMotionServer */
-	lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
-	OutputLN(lm_channel);
+	lm = LeapMotion(LEAP_PORT);
+	lm.Connect();
+	//lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
+	//OutputLN(lm_channel);
 
 	/*Init fingers */
 
@@ -399,6 +396,8 @@ function DownloadReady(RequestID)
 function OnTimer()
 {
 	//receive packet
+	lm.UpdatePos(&palm_pos, &f0_pos, &f1_pos);
+	/*
 	if(NetDataReady(lm_channel))
 	{
 		var data = "";
@@ -410,6 +409,7 @@ function OnTimer()
 		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
 		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
 	}
+	*/
 
 }
 
