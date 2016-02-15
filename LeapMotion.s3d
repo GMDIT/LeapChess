@@ -1,11 +1,17 @@
 #ifndef _LEAPMOTION
 #define _LEAPMOTION
 
+#define LM_SIDE_W 0
+#define LM_SIDE_B 1
+#define LM_SIDE_M 2
+
 class LeapMotion
 {
     var channel;
     var data;
     var port;
+
+    var side;
 
     var reduction_factor;
     var dataValues;
@@ -14,9 +20,10 @@ class LeapMotion
     UpdatePos(palm_pos, f0_pos, f1_pos);
 };
 
-function LeapMotion::LeapMotion(p)
+function LeapMotion::LeapMotion(p, s)
 {
     port = p;
+    side = s;
     reduction_factor = 10;
     dataValues = {"0",0,0,0, 0,0,0 ,0,0,0};
     //		handID, palmX, palmY, palmZ, f0X, ... f1X...
@@ -54,10 +61,31 @@ function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
 		data = NetReceiveFrom(channel, &recIP);
 		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
 
-		palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
+        switch(side)
+        {
+            case LM_SIDE_W:
+                palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
+        		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
+        		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
+                break;
+            case LM_SIDE_B:
+                palm_pos = [dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, -dataValues[1]/ reduction_factor];
+                f0_pos = [dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, -dataValues[4]/ reduction_factor];
+                f1_pos = [dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, -dataValues[7]/ reduction_factor];
+                break;
+            case LM_SIDE_M:
+                palm_pos = [dataValues[1] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[3]/ reduction_factor];
+        		f0_pos = [dataValues[4] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[6]/ reduction_factor];
+        		f1_pos = [dataValues[7] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[9]/ reduction_factor];
+                break;
+        }
+
+        /*default, white side:
+        palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
 		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
 		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
-	}
+        */
+    }
 }
 
 #endif

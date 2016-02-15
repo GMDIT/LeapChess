@@ -168,7 +168,7 @@ function OnInit(params)
 	ce.Connect();
 
 	/*Connectin to LeapMotionServer */
-	lm = LeapMotion(LEAP_PORT);
+	lm = LeapMotion(LEAP_PORT, LM_SIDE_W);
 	lm.Connect();
 	//lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
 	//OutputLN(lm_channel);
@@ -211,6 +211,8 @@ function OnInit(params)
 	o_table = CVmObj(m_table);
 	o_table.Normalize(50);
 	o_table.SetPosition([0,-20,0]);
+
+
 
 	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack());
 	cb.Init();
