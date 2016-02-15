@@ -8,6 +8,7 @@
 #include "Materials.s3d"
 #include "Skybox.s3d"
 #include "LeapMotion.s3d"
+#include "MarcelloUtils.s3d"
 
 
 /* Set global scene parameters */
@@ -131,6 +132,7 @@ function OnInit(params)
 	SetFrameRate(60);
 	SetAmbientLight(0.2,0.2,0.1);
 
+
 		/* initialize camera */
 	CameraGetCurrent().SetPosition(CamPos);
 			//CameraGetCurrent().SetDirection(1, 1, 0);
@@ -232,7 +234,6 @@ function OnFrame()
 	/******************
 	*      UPDATE     *
 	*******************/
-
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);

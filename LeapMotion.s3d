@@ -80,12 +80,16 @@ function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
                 break;
         }
 
+        return true;
+
         /*default, white side:
         palm_pos = [-dataValues[3] / reduction_factor, dataValues[2]/ reduction_factor -20, dataValues[1]/ reduction_factor];
 		f0_pos = [-dataValues[6] / reduction_factor, dataValues[5]/ reduction_factor -20, dataValues[4]/ reduction_factor];
 		f1_pos = [-dataValues[9] / reduction_factor, dataValues[8]/ reduction_factor -20, dataValues[7]/ reduction_factor];
         */
     }
+    else
+        return false;
 }
 
 #endif
