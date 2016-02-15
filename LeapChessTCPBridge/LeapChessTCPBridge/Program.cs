@@ -107,7 +107,7 @@ namespace LeapChessTCPBridge
 
                     //TODO: it works, but is veeeery ugly
                     var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
-                    var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries); //TODO: what if there isn't bestmove?
 
                     Console.WriteLine(">>" + bestmove[1]);
                     byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
