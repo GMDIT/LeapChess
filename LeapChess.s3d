@@ -262,7 +262,7 @@ var touchPiece;
 function Update_Startscreen()
 {
 	//CameraMoveMouse();
-	OutputLN(CameraGetPosition());
+	//OutputLN(CameraGetPosition());
 
 	if(f1.GetPosition()[0] < -10)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{

@@ -151,6 +151,17 @@ function ChessBoard::Init()
             bPieces[i].SetXYPos(corner, dimension);
             cbMatrix[bPieces[i].position] = bPieces[i];
             //OutputLN(cbMatrix[32] == Void);
+
+            //for the initial animation
+            if(i!=7)
+            {
+                var wPos = wPieces[i].obj.GetPosition();
+                wPieces[i].obj.SetPosition(wPos[0], 50, wPos[2]);
+                var bPos = bPieces[i].obj.GetPosition();
+                bPieces[i].obj.SetPosition(bPos[0], 50, bPos[2]);
+                wPieces[i].isDropping = true;
+                bPieces[i].isDropping = true;
+            }
         }
 }
 
@@ -253,7 +264,7 @@ function ChessBoard::DropPieces()
             }
 
 
-            if(distY > 0)
+            if(distY != 0)
 			{
                 decrY = CalcDecr(th, drop_step, distY);
                 /*
