@@ -23,8 +23,17 @@ var browser;
 var res_x = 1600;
 var res_y = 900;
 
+/* Scene data */
+#define S_STARTSCREEN 0
+#define S_GAMEPLAY 1
+#define S_ENDSCREEN 2
+#define S_TRANSITION 3
 
-// TODO: put your global variables here
+var scene = S_STARTSCREEN;
+
+var b_title;
+var title;
+
 /*ChessEngine server data */
 //var ce_channel;
 var ce_data;
@@ -44,7 +53,7 @@ var f0;
 var f0_pos = [10,20.0,0.0];
 
 var f1;
-var f1_pos = [20,20.0,0.0];
+var f1_pos = [0,20.0,0.0];
 
 /*chessboard */
 var cb;
@@ -69,17 +78,16 @@ var mov_piece = -1;
 
 var cmdSent = false;
 
-/*Procedural Objects */
-var sphere;
-
 /* Camera globals */
-var CamPos = [0, 45.0, 45.0];	// camera position
+var camPos_StartScreen = [0,5,45];
+//var CamPos = {[0, 45.0, 45.0], [45.0, 45.0, 0]};	// camera position
+var CamPos = {[-45, 45.0, 0], [45.0, 45.0, 0]};	// camera position
 var CamTarget = [0.0, 0.0, 0.0];
 
 /* Light globals */
 var Light0;
 //var PosL = [0.0, 15.0, -30];	// default light position
-var PosL = CamPos;//[-45,40,0]; //CamPos;//[20, 45.0, 15];	// default light position
+var PosL = [0, 45.0, 45.0]; //CamPos[0];//[-45,40,0]; //CamPos;//[20, 45.0, 15];	// default light position
 //var PosL = [-20, 100.0, -15];	// default light position
 
 var Light1;
@@ -100,8 +108,7 @@ var shader;
 
 var shader_name = "adows.sh";
 /*****************************/
-
-/* Function declarations */
+/*  Function declarations    */
 function CameraMoveMouse();
 function DrawGrid(col, size);
 
@@ -113,6 +120,14 @@ function RenderOnTexture();
 function FillTextureMatrix();
 function show_fbo();
 
+function Update_Startscreen();
+function Update_Gameplay();
+function Update_Endscreen();
+
+function Draw_StartScreen();
+function Draw_Gameplay();
+function Draw_EndScreen();
+/*******************************/
 
 function OnDownload()
 {
@@ -120,6 +135,7 @@ function OnDownload()
 	// E.g.: FileDownload("resource.ext");
 
 	//FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
+	FileDownload("leapchess.png");
 	FileDownload("chessSet.zip");
 	FileDownload("textures.zip");
 	FileDownload("g_lowres_skybox.zip");
@@ -133,10 +149,9 @@ function OnInit(params)
 	SetAmbientLight(0.2,0.2,0.1);
 
 
-		/* initialize camera */
-	CameraGetCurrent().SetPosition(CamPos);
+
 			//CameraGetCurrent().SetDirection(1, 1, 0);
-	CameraGetCurrent().SetTarget(CamTarget);
+	//CameraGetCurrent().SetTarget(CamTarget);
 			//SetScreenResolution(1280, 720);
 	//CameraSetPosition(PosL);
 	//CameraSetTarget(CamTarget);
@@ -154,9 +169,9 @@ function OnInit(params)
 	Light0.Enable();
 
 	Light1 = CVmLight();
-	Light1.SetPosition(CamPos);
+	Light1.SetPosition(CamPos[0]);
 	Light1.SetAmbient(0.5, 0.5, 0.6);
-	Light1.Enable();
+	//Light1.Enable();
 
 
 	//sm
@@ -170,7 +185,7 @@ function OnInit(params)
 	ce.Connect();
 
 	/*Connectin to LeapMotionServer */
-	lm = LeapMotion(LEAP_PORT, LM_SIDE_W);
+	lm = LeapMotion(LEAP_PORT, LM_SIDE_M);
 	lm.Connect();
 	//lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
 	//OutputLN(lm_channel);
@@ -218,32 +233,102 @@ function OnInit(params)
 
 	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack());
 	cb.Init();
-	//OutputLN(cb.GenerateFENChessboard(CP_W));
 
 	CameraActivate(LIGHT_CAMERA);
 	CameraSetPosition(PosL);
 	CameraSetTarget([0, 0, 0]);
 
 	CameraActivate(SCENE_CAMERA);
+	/* initialize camera */
+	//CameraGetCurrent().SetPosition(camPos_StartScreen);
+	CameraSetPosition(camPos_StartScreen);
+	CameraSetTarget(camPos_StartScreen);
+
+
+
+
 
 	LoadSkyboxTextures();
+
+
+	b_title = CVmBillboard("leapchess.png",5.13,1.33);
+  	title = CVmObj();
+  	title.LinkToBillboard(b_title);
+  	title.SetPosition(0,10,0);
 }
 
-function OnFrame()
+var touchTimer = 0;
+var touchPiece;
+function Update_Startscreen()
+{
+	//CameraMoveMouse();
+	OutputLN(CameraGetPosition());
+
+	if(f1.GetPosition()[0] < -10)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
+	{
+		touchTimer++;
+		touchPiece = CP_W;
+	}
+	else if(f1.GetPosition()[0] > 10)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
+	{
+		touchTimer++;
+		touchPiece = CP_B;
+	}
+	else
+		touchTimer = 0;
+
+	if(touchTimer > 12)
+	{
+		playerColor = touchPiece;
+		lm.ChangeSide(playerColor);
+		CameraSetTarget(CamTarget);
+		CameraSetPosition(CamPos[playerColor]);
+		//MoveCameraAndTarget(CamPos, CamTarget, 240);
+		scene = S_GAMEPLAY;
+	}
+
+}
+
+function Draw_StartScreen()
+{
+	//Shadow Mapping
+	CameraActivate(SCENE_CAMERA);
+
+	/*Drawing Scene */
+	SceneBegin();
+		RenderSkybox();
+
+
+		//glCullFace(GL_FRONT);
+		glMatrixMode(GL_MODELVIEW);
+		//glCullFace(GL_BACK);
+
+
+			cb.wPieces[7].Draw();
+			cb.bPieces[7].Draw();
+
+			f1.Draw();
+
+			o_table.Draw();
+			o_chessboard.Draw();
+
+
+		title.Draw();
+
+	SceneEnd();
+}
+
+var timerResponse = 0;
+function Update_Gameplay()
 {
 	/******************
 	*      UPDATE     *
 	*******************/
-	palm.SetPosition(palm_pos);
-	f0.SetPosition(f0_pos);
-	f1.SetPosition(f1_pos);
-
 	cb.OnFrame();
-
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		CameraMoveMouse();
+		//CameraMoveMouse();
 	}
 	else
 	{
@@ -251,8 +336,7 @@ function OnFrame()
 		CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
 	}
 
-	//OutputLN(modulus(f1_pos - f0_pos));
-
+	//OutputLN("Turn: ", cb.turn, "--- Player: ", playerColor);
 	if(cb.turn == playerColor)
 	{
 		//Check if gripping
@@ -269,11 +353,11 @@ function OnFrame()
 			mov_gripping = false;
 		}
 
-
 		//Check if and which piece I'm touching
 		mov_touching = false;
 		//mov_piece = -1;
 		var tmp = cb.FindTouched(f0, playerColor);
+
 		if(tmp != -1)
 		{
 			mov_touching = true;
@@ -313,7 +397,13 @@ function OnFrame()
 		if(!cmdSent)
 		{
 			if(cb.totalMovesCounter == 1)
-				cmd = Sprintf("position startpos moves %s", cb.latestMove[2]);
+			{
+				if(playerColor == CP_W)
+					cmd = Sprintf("position startpos moves %s", cb.latestMove[2]);
+				else
+					cmd = Sprintf("position startpos");
+
+			}
 			else
 				cmd = Sprintf("position fen %s moves %s", cb.GenerateFENChessboard(), cb.latestMove[2]);
 
@@ -322,8 +412,9 @@ function OnFrame()
 			//NetSendToTCP(ce_channel, cmd);
 			OutputLN("CMD sent");
 			cmdSent = true;
+			timerResponse = 0;
 		}
-		else if (!cb.isDropping) //wait for the dropping pieces
+		else if (!cb.isDropping && timerResponse++ > 60) //wait for the dropping pieces
 		{
 			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
@@ -339,12 +430,10 @@ function OnFrame()
 
 	/* manage camera */
 	//CameraMoveMouse();
+}
 
-	//OutputLN(CameraGetPosition());
-	//OutputLN(CameraGetRotationMatrix());
-	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
-
-
+function Draw_Gameplay()
+{
 	/******************
 	*      DRAW       *
 	*******************/
@@ -391,6 +480,37 @@ function OnFrame()
 	SceneEnd();
 }
 
+function Update_Endscreen()
+{
+
+}
+
+function Draw_EndScreen()
+{
+
+}
+function OnFrame()
+{
+	//OutputLN(CameraGetPosition());
+	//OutputLN(CameraGetRotationMatrix());
+	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
+	switch(scene)
+	{
+		case S_STARTSCREEN:
+			Update_Startscreen();
+			Draw_StartScreen();
+			break;
+		case S_GAMEPLAY:
+			Update_Gameplay();
+			Draw_Gameplay();
+			break;
+		case S_ENDSCREEN:
+			Update_Endscreen();
+			Draw_EndScreen();
+			break;
+	}
+}
+
 function DownloadReady(RequestID)
 {
 	// TODO
@@ -400,6 +520,9 @@ function OnTimer()
 {
 	//receive packet
 	lm.UpdatePos(&palm_pos, &f0_pos, &f1_pos);
+	palm.SetPosition(palm_pos);
+	f0.SetPosition(f0_pos);
+	f1.SetPosition(f1_pos);
 	/*
 	if(NetDataReady(lm_channel))
 	{

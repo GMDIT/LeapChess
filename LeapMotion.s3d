@@ -18,6 +18,7 @@ class LeapMotion
 
     Connect();
     UpdatePos(palm_pos, f0_pos, f1_pos);
+    ChangeSide(newSide);
 };
 
 function LeapMotion::LeapMotion(p, s)
@@ -90,6 +91,11 @@ function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
     }
     else
         return false;
+}
+
+function LeapMotion::ChangeSide(newSide)
+{
+    side = newSide;
 }
 
 #endif
