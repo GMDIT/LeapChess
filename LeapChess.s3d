@@ -268,18 +268,26 @@ function Update_Startscreen()
 	{
 		touchTimer++;
 		touchPiece = CP_W;
+		f1.ForceMaterial(MGetWhite());
+		palm.ForceMaterial(MGetWhite());
 	}
 	else if(f1.GetPosition()[0] > 10)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
 		touchPiece = CP_B;
+		f1.ForceMaterial(MGetBlack());
+		palm.ForceMaterial(MGetBlack());
 	}
 	else
+	{
 		touchTimer = 0;
+		f1.ForceMaterial();
+	}
 
-	if(touchTimer > 12)
+	if(touchTimer > 120)
 	{
 		playerColor = touchPiece;
+		f1.ForceMaterial();
 		lm.ChangeSide(playerColor);
 		CameraSetTarget(CamTarget);
 		CameraSetPosition(CamPos[playerColor]);
