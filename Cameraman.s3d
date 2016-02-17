@@ -1,0 +1,60 @@
+#ifndef _CAMERAMAN
+#define _CAMERAMAN
+
+class Cameraman
+{
+    var size;
+    var objs;
+    var head;
+    var tail;
+
+    Add(camera, endPos, endTarget);
+    Update();
+};
+
+function Cameraman::Cameraman()
+{
+    size = 6;
+    objs = Array(size);
+    head = 0;
+    tail = 0;
+}
+
+function Cameraman::Add(camera, endPos, endTarget)
+{
+    objs[tail] = {0.0, camera, camera.GetPosition(), camera.GetTarget(), endPos, endTarget};
+    tail = (tail + 1) % size;
+}
+
+function Cameraman::Update()
+{
+    var i = head;
+    while(i != tail)
+    {
+        var o = objs[i];
+        var t = o[0];
+        if(t < 1.0)
+        {
+            t = t + 0.01;
+            o[0] = t;
+            if(t > 0.0)
+            {
+                var newPosition =  [o[2][0] * (1-t) + o[4][0] * t,
+                                    o[2][1] * (1-t) + o[4][1] * t,
+                                    o[2][2] * (1-t) + o[4][2] * t];
+                o[1].SetPosition(newPosition);
+
+                var newTarget = [   o[3][0] * (1-t) + o[5][0] * t,
+                                    o[3][1] * (1-t) + o[5][1] * t,
+                                    o[3][2] * (1-t) + o[5][2] * t];
+                o[1].SetTarget(newTarget);
+            }
+        }
+        else if(i == head)
+            head = (head + 1) % size;
+
+        i = (i+1) % size;
+    }
+}
+
+#endif
