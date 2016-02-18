@@ -191,7 +191,7 @@ function RenderSkybox()
 {
 
 	var dir = CameraGetCurrent().GetDirection();
-	var SKY_C = 10;
+	var SKY_C = 1.5;
 
 	// Store the current matrix
    glPushMatrix();

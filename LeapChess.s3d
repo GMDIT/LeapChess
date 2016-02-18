@@ -32,8 +32,19 @@ var res_y = 900;
 
 var scene = S_STARTSCREEN;
 
-var b_title;
-var title;
+/* GUI */
+var b_title, g_title;
+var g_title_pos = [0,10,0];
+var g_title_dim = [5.13, 1.33];
+var g_dim = [5.13, 0.71];
+var b_bwin, g_bwin;
+var b_wwin, g_wwin;
+var g_win_pos = [0, 14, 0];
+var b_newgame, g_newgame;
+var g_newgame_pos = [0, 8, 0];
+var b_exit, g_exit;
+var g_exit_pos = [0, 3, 0];
+
 
 /*ChessEngine server data */
 //var ce_channel;
@@ -137,7 +148,7 @@ function OnDownload()
 	// E.g.: FileDownload("resource.ext");
 
 	//FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
-	FileDownload("leapchess.png");
+	FileDownload("gui.zip");
 	FileDownload("chessSet.zip");
 	FileDownload("textures.zip");
 	FileDownload("g_lowres_skybox.zip");
@@ -250,14 +261,35 @@ function OnInit(params)
 
 	LoadSkyboxTextures();
 
-	b_title = CVmBillboard("leapchess.png",5.13*1.3,1.33*1.3);
-  	title = CVmObj();
-  	title.LinkToBillboard(b_title);
-  	title.SetPosition(0,10,0);
+	/** GUI **/
+	b_title = CVmBillboard("leapchess.png",g_title_dim[0]*1.3,g_title_dim[1]*1.3);
+  	g_title = CVmObj();
+  	g_title.LinkToBillboard(b_title);
+  	g_title.SetPosition(g_title_pos);
+
+	b_bwin = CVmBillboard("blackwin.png",g_dim[0]*1.3,g_dim[1]*1.3);
+  	g_bwin = CVmObj();
+  	g_bwin.LinkToBillboard(b_bwin);
+  	g_bwin.SetPosition(g_win_pos);
+
+	b_wwin = CVmBillboard("whitewin.png",g_dim[0]*1.3,g_dim[1]*1.3);
+  	g_wwin = CVmObj();
+  	g_wwin.LinkToBillboard(b_wwin);
+  	g_wwin.SetPosition(g_win_pos);
+
+	b_newgame = CVmBillboard("newgame.png",g_dim[0]*1.3,g_dim[1]*1.3);
+  	g_newgame = CVmObj();
+  	g_newgame.LinkToBillboard(b_newgame);
+  	g_newgame.SetPosition(g_newgame_pos);
+
+	b_exit = CVmBillboard("exit.png",g_dim[0]*1.3,g_dim[1]*1.3);
+  	g_exit = CVmObj();
+  	g_exit.LinkToBillboard(b_exit);
+  	g_exit.SetPosition(g_exit_pos);
 }
 
 var touchTimer = 0;
-var touchPiece;
+var touchElem;
 function Update_Startscreen()
 {
 	//CameraMoveMouse();
@@ -266,14 +298,14 @@ function Update_Startscreen()
 	if(f1.GetPosition()[0] < -10)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
-		touchPiece = CP_W;
+		touchElem = CP_W;
 		f1.ForceMaterial(MGetWhite());
 		palm.ForceMaterial(MGetWhite());
 	}
 	else if(f1.GetPosition()[0] > 10)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
-		touchPiece = CP_B;
+		touchElem = CP_B;
 		f1.ForceMaterial(MGetBlack());
 		palm.ForceMaterial(MGetBlack());
 	}
@@ -285,7 +317,7 @@ function Update_Startscreen()
 
 	if(touchTimer > 120)
 	{
-		playerColor = touchPiece;
+		playerColor = touchElem;
 		f1.ForceMaterial();
 		lm.ChangeSide(playerColor);
 		cm.Add(CameraGetCurrent(), CamPos[playerColor], CamTarget);
@@ -300,29 +332,12 @@ function Update_Startscreen()
 function Draw_StartScreen()
 {
 	//Shadow Mapping
-	CameraActivate(SCENE_CAMERA);
+	Draw_Gameplay();
 
 	/*Drawing Scene */
-	SceneBegin();
-		RenderSkybox();
-
-
-		//glCullFace(GL_FRONT);
+	SceneBegin(VR_LEAVE_COLOR);
 		glMatrixMode(GL_MODELVIEW);
-		//glCullFace(GL_BACK);
-
-
-			cb.wPieces[7].Draw();
-			cb.bPieces[7].Draw();
-
-			f1.Draw();
-
-			o_table.Draw();
-			o_chessboard.Draw();
-
-
-		title.Draw();
-
+		g_title.Draw();
 	SceneEnd();
 }
 
@@ -340,8 +355,9 @@ function Update_Gameplay()
 	}
 	else
 	{
-		OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
-		CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
+		//OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
+		//CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
+		scene = S_ENDSCREEN;
 	}
 
 	//OutputLN("Turn: ", cb.turn, "--- Player: ", playerColor);
@@ -460,7 +476,7 @@ function Draw_Gameplay()
 		else
 			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
-		palm.Draw();
+		if(scene == S_GAMEPLAY) palm.Draw();
 
 		FillTextureMatrix();
 		//glCullFace(GL_FRONT);
@@ -471,9 +487,19 @@ function Draw_Gameplay()
 			SetActiveTexture(fbo);
 			shader.SetParameter("shadowMap", 0);
 
-			cb.DrawPieces();
+			if(scene != S_STARTSCREEN)
+			{
+				cb.DrawPieces();
 
-			f0.Draw();
+				if(scene == S_GAMEPLAY)
+					f0.Draw();
+			}
+			else if(scene == S_STARTSCREEN)
+			{
+				cb.wPieces[7].Draw();
+				cb.bPieces[7].Draw();
+			}
+
 			f1.Draw();
 
 			o_table.Draw();
@@ -491,11 +517,65 @@ function Draw_Gameplay()
 function Update_Endscreen()
 {
 
+	CameraSetPosition(vectorRotate(-0.01, 0, 1, 0,CameraGetPosition()));
+	var f1Pos = f1.GetPosition();
+	f1.SetPosition(0, f1Pos[1], 0);
+
+	if(f1Pos[1] < 4)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
+	{
+		touchTimer++;
+		touchElem = -1;
+		f1.ForceMaterial(MGetWhite());
+	}
+	else if(f1Pos[1] > 8 && f1Pos[1] < 10)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
+	{
+		touchTimer++;
+		touchElem = S_STARTSCREEN;
+		f1.ForceMaterial(MGetBlack());
+	}
+	else
+	{
+		touchTimer = 0;
+		f1.ForceMaterial();
+	}
+
+	if(touchTimer > 220)
+	{
+		f1.ForceMaterial();
+		if(touchElem == -1)
+		{
+			//EXIT
+			browser.Quit();
+		}
+		else
+		{
+			//RESET
+
+			lm.ChangeSide(S_STARTSCREEN);
+			cm.Add(CameraGetCurrent(), camPos_StartScreen, [0,camPos_StartScreen[1],0]);
+			scene = S_STARTSCREEN;
+		}
+	}
 }
 
 function Draw_EndScreen()
 {
+	//Shadow Mapping
+	Draw_Gameplay();
 
+	/*Drawing Scene */
+	SceneBegin(VR_LEAVE_COLOR);
+		glMatrixMode(GL_MODELVIEW);
+
+		if(cb.turn == CP_W)
+			g_wwin.Draw();
+		else
+			g_bwin.Draw();
+
+		g_newgame.Draw();
+		g_exit.Draw();
+
+	SceneEnd();
 }
 function OnFrame()
 {
