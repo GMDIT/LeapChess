@@ -14,10 +14,10 @@ function MGetWhite()
     if(m_white == null)
     {
         m_white = CVmMaterial();
-    	m_white.ambient   = [0.5, 0.5, 0.5, 1.0]; //white
-    	m_white.diffuse   = [0.9, 0.9, 0.9, 1.0];
-    	m_white.specular  = [0.1, 0.1, 0.1, 0.5];
-    	m_white.shininess = 0;
+    	m_white.ambient   = [0.5, 0.5, 0.4, 1.0]; //white
+    	m_white.diffuse   = [0.9, 0.9, 0.88, 1.0];
+    	m_white.specular  = [0.1, 0.1, 0.15, 0];
+    	m_white.shininess = 10;
         //m_white.SetTexture(CVmTexture("w_wood.jpg", NULL),0);
     }
 
@@ -33,7 +33,7 @@ function MGetBlack()
     	m_black.diffuse   = [0.1, 0.1, 0.1, 1.0];
     	m_black.specular  = [0.2, 0.1, 0.1, 0.5];
     	//m_black.emission = [1.0, 1.0, 0, 1];
-    	m_black.shininess = 128;
+    	m_black.shininess = 10;
     	//m_black.transparency = 0.5;
     }
 
