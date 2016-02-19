@@ -73,6 +73,7 @@ var hlList = null;
 var lglMoves = null;
 var playerColor = CP_W;
 var endGame = false;
+var lastPieces;
 
 var m_chessboard;
 var o_chessboard;
@@ -351,12 +352,14 @@ function Update_Gameplay()
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
+		endGame = cb.totalMovesCounter == 3; //TODO::DELETEME!!!
 		//CameraMoveMouse();
 	}
 	else
 	{
 		//OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
 		//CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
+		touchTimer = 0;
 		scene = S_ENDSCREEN;
 	}
 
@@ -518,6 +521,28 @@ function Update_Endscreen()
 {
 
 	CameraSetPosition(vectorRotate(-0.01, 0, 1, 0,CameraGetPosition()));
+
+	//Disappear pieces
+	for(var i = 0; i<16; i++)
+	{
+		if((i != 7 || cb.turn != CP_W) && (cb.turn != CP_B || cb.wPieces[i].position != cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		{
+			var wo = cb.wPieces[i].obj;
+			var woPos = wo.GetPosition();
+			if(woPos[1] > -10)
+				wo.SetPosition(woPos[0], woPos[1] - 0.02, woPos[2]);
+		}
+
+		if((i != 7 || cb.turn != CP_B) || (cb.turn != CP_W || cb.bPieces[i].position != cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		{
+			var bo = cb.bPieces[i].obj;
+			var boPos = bo.GetPosition();
+			if(boPos[1] > -10)
+				bo.SetPosition(boPos[0], boPos[1] - 0.02, boPos[2]);
+		}
+	}
+
+	//UI INTERACTION
 	var f1Pos = f1.GetPosition();
 	f1.SetPosition(0, f1Pos[1], 0);
 
@@ -539,7 +564,8 @@ function Update_Endscreen()
 		f1.ForceMaterial();
 	}
 
-	if(touchTimer > 220)
+	//TODO:DELETE FALSE!!
+	if(false && touchTimer > 220)
 	{
 		f1.ForceMaterial();
 		if(touchElem == -1)
@@ -550,7 +576,8 @@ function Update_Endscreen()
 		else
 		{
 			//RESET
-
+			cb.Init();
+			//TODO: stockfish init
 			lm.ChangeSide(S_STARTSCREEN);
 			cm.Add(CameraGetCurrent(), camPos_StartScreen, [0,camPos_StartScreen[1],0]);
 			scene = S_STARTSCREEN;
@@ -568,9 +595,9 @@ function Draw_EndScreen()
 		glMatrixMode(GL_MODELVIEW);
 
 		if(cb.turn == CP_W)
-			g_wwin.Draw();
-		else
 			g_bwin.Draw();
+		else
+			g_wwin.Draw();
 
 		g_newgame.Draw();
 		g_exit.Draw();
