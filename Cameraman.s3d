@@ -8,7 +8,7 @@ class Cameraman
     var head;
     var tail;
 
-    Add(camera, endPos, endTarget);
+    Add(camera, endPos, endTarget, speed);
     Update();
 };
 
@@ -20,9 +20,10 @@ function Cameraman::Cameraman()
     tail = 0;
 }
 
-function Cameraman::Add(camera, endPos, endTarget)
+function Cameraman::Add(camera, endPos, endTarget, speed)
 {
-    objs[tail] = {0.0, camera, camera.GetPosition(), camera.GetTarget(), endPos, endTarget};
+    var s = speed != Void ? speed : 0.01;
+    objs[tail] = {0.0, camera, camera.GetPosition(), camera.GetTarget(), endPos, endTarget, s};
     tail = (tail + 1) % size;
 }
 
@@ -35,7 +36,7 @@ function Cameraman::Update()
         var t = o[0];
         if(t < 1.0)
         {
-            t = t + 0.01;
+            t = t + o[6];//0.01;
             o[0] = t;
             if(t > 0.0)
             {
