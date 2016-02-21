@@ -39,11 +39,11 @@ var g_title_dim = [5.13, 1.33];
 var g_dim = [5.13, 0.71];
 var b_bwin, g_bwin;
 var b_wwin, g_wwin;
-var g_win_pos = [0, 14, 0];
+var g_win_pos = [0, 16, 0];
 var b_newgame, g_newgame;
 var g_newgame_pos = [0, 8, 0];
 var b_exit, g_exit;
-var g_exit_pos = [0, 3, 0];
+var g_exit_pos = [0, 1, 0];
 
 
 /*ChessEngine server data */
@@ -65,7 +65,7 @@ var f0;
 var f0_pos = [10,20.0,0.0];
 
 var f1;
-var f1_pos = [0,20.0,0.0];
+var f1_pos = [-100,20.0,0.0];
 
 /*chessboard */
 var cb;
@@ -94,6 +94,7 @@ var cmdSent = false;
 /* Camera globals */
 var cm;
 var camPos_StartScreen = [0,5,45];
+var camTar_StartScreen = [0, 5, 0];
 //var CamPos = {[0, 45.0, 45.0], [45.0, 45.0, 0]};	// camera position
 var CamPos = {[-45, 45.0, 0], [45.0, 45.0, 0]};	// camera position
 var CamTarget = [0.0, 0.0, 0.0];
@@ -224,7 +225,7 @@ function OnInit(params)
 
 	var sphere_mesh_2 = CVmNewMesh(VRP_SPHERE , num_seg, radius, hemisphere);
 	sphere_mesh_2.CenterBoundingBox();
-	sphere_mesh_2.SetMaterial(MGetRed());
+	sphere_mesh_2.SetMaterial(MGetGreen());
 	f1 = CVmObj(sphere_mesh_2);
 	//f1.LinkToMesh(sphere_mesh_2);
 
@@ -256,7 +257,7 @@ function OnInit(params)
 	/* initialize camera */
 	//CameraGetCurrent().SetPosition(camPos_StartScreen);
 	CameraSetPosition(camPos_StartScreen);
-	CameraSetTarget(0,camPos_StartScreen[1],0);
+	CameraSetTarget(camTar_StartScreen);
 
 	cm = Cameraman();
 
@@ -291,10 +292,24 @@ function OnInit(params)
 
 var touchTimer = 0;
 var touchElem;
+var fingerEnabled = false;
 function Update_Startscreen()
 {
 	//CameraMoveMouse();
 	//OutputLN(CameraGetPosition());
+
+	if(!fingerEnabled)
+	{
+		var fp = f1.GetPosition();
+		f1.ForceMaterial(MGetRed());
+		if(fp[0] > -5 && fp[0] < 5)
+		{
+			fingerEnabled = true;
+			f1.ForceMaterial();
+		}
+		else
+			return;
+	}
 
 	if(f1.GetPosition()[0] < -7)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{
@@ -317,12 +332,13 @@ function Update_Startscreen()
 	{
 		touchTimer = 0;
 		f1.ForceMaterial();
-		cm.Add(CameraGetCurrent(), camPos_StartScreen,[0,camPos_StartScreen[1],0], 0.12);
+		cm.Add(CameraGetCurrent(), camPos_StartScreen,camTar_StartScreen, 0.12);
 	}
 
 	if(touchTimer > 180)
 	{
 		playerColor = touchElem;
+		touchTimer = 0;
 		f1.ForceMaterial();
 		lm.ChangeSide(playerColor);
 		cm.Add(CameraGetCurrent(), CamPos[playerColor], CamTarget);
@@ -364,7 +380,11 @@ function Update_Gameplay()
 		//OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
 		//CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
 		touchTimer = 0;
+		fingerEnabled = false;
+		f1.forceMaterial(MGetRed());
 		scene = S_ENDSCREEN;
+		var camCurrPos = CameraGetPosition();
+		cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
 
 	//OutputLN("Turn: ", cb.turn, "--- Player: ", playerColor);
@@ -529,10 +549,12 @@ function Update_Endscreen()
 
 	CameraSetPosition(vectorRotate(-0.01, 0, 1, 0,CameraGetPosition()));
 
+
+
 	//Disappear pieces
 	for(var i = 0; i<16; i++)
 	{
-		if((i != 7 || cb.turn != CP_W) && (cb.turn != CP_B || cb.wPieces[i].position != cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		if(!(i == 7 || cb.turn == CP_W) || !(cb.turn == CP_B && cb.wPieces[i].position == cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
 		{
 			var wo = cb.wPieces[i].obj;
 			var woPos = wo.GetPosition();
@@ -553,6 +575,19 @@ function Update_Endscreen()
 	var f1Pos = f1.GetPosition();
 	f1.SetPosition(0, f1Pos[1], 0);
 
+	if(!fingerEnabled)
+	{
+		f1.ForceMaterial(MGetRed());
+		if(f1Pos[1] > 4 && f1Pos[1] < 8)
+		{
+			fingerEnabled = true;
+			f1.ForceMaterial();
+		}
+		else
+			return;
+	}
+
+
 	if(f1Pos[1] < 4)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
@@ -571,22 +606,22 @@ function Update_Endscreen()
 		f1.ForceMaterial();
 	}
 
-	//TODO:DELETE FALSE!!
-	if(false && touchTimer > 220)
+	if(touchTimer > 220)
 	{
 		f1.ForceMaterial();
+		touchTimer = 0;
 		if(touchElem == -1)
 		{
-			//EXIT
 			browser.Quit();
 		}
 		else
 		{
 			//RESET
 			cb.Init();
-			//TODO: stockfish init
-			lm.ChangeSide(S_STARTSCREEN);
-			cm.Add(CameraGetCurrent(), camPos_StartScreen, [0,camPos_StartScreen[1],0]);
+			endGame = false;
+			hlList = null;
+			lm.ChangeSide(LM_SIDE_M);
+			cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
 			scene = S_STARTSCREEN;
 		}
 	}
@@ -645,6 +680,7 @@ function OnTimer()
 {
 	//receive packet
 	lm.UpdatePos(&palm_pos, &f0_pos, &f1_pos);
+
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
