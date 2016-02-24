@@ -94,10 +94,7 @@ function ChessBoard::ChessBoard(c, d, wm, bm)
     corner = c;
     dimension = d;
 
-    cbMatrix = Array(64);
     letters = {"A", "B", "C", "D", "E", "F", "G", "H"};
-
-    isDropping = false;
 
     anim = Animator();
 }
@@ -118,6 +115,8 @@ function ChessBoard::Init()
     totalMovesCounter = 1;
     turn = CP_W;
     eatedCounters = {0,0};
+    cbMatrix = Array(64);
+    isDropping = false;
 
     wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
 	wPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, wMaterial);

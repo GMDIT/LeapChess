@@ -293,6 +293,26 @@ function OnInit(params)
 var touchTimer = 0;
 var touchElem;
 var fingerEnabled = false;
+
+function ResetGlobals()
+{
+	palm_pos = [10,20.0,0.0];
+	f0_pos = [10,20.0,0.0];
+	f1_pos = [-100,20.0,0.0];
+	hlList = null;
+	lglMoves = null;
+	playerColor = CP_W;
+	endGame = false;
+	mov_gripping = false;
+	mov_touching = false;
+	mov_moving = false;
+	mov_piece = -1;
+	cmdSent = false;
+	touchTimer = 0;
+	fingerEnabled = false;
+}
+
+
 function Update_Startscreen()
 {
 	//CameraMoveMouse();
@@ -372,7 +392,7 @@ function Update_Gameplay()
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		//endGame = cb.totalMovesCounter == 3; //TODO::DELETEME!!!
+		endGame = cb.totalMovesCounter == 2; //TODO::DELETEME!!!
 		//CameraMoveMouse();
 	}
 	else
@@ -595,17 +615,25 @@ function Update_Endscreen()
 		touchTimer++;
 		touchElem = -1;
 		f1.ForceMaterial(MGetWhite());
+
+		if(touchTimer == 1)
+			cm.Add(CameraGetCurrent(), CameraGetPosition(), g_exit_pos);
 	}
-	else if(f1Pos[1] > 8 && f1Pos[1] < 10)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
+	else if(f1Pos[1] > 7 && f1Pos[1] < 12)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
 		touchElem = S_STARTSCREEN;
 		f1.ForceMaterial(MGetBlack());
+		if(touchTimer == 1)
+			cm.Add(CameraGetCurrent(), CameraGetPosition(), g_newgame_pos);
 	}
 	else
 	{
 		touchTimer = 0;
 		f1.ForceMaterial();
+
+		var camCurrPos = CameraGetPosition();
+		cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
 
 	if(touchTimer > 220)
@@ -620,8 +648,7 @@ function Update_Endscreen()
 		{
 			//RESET
 			cb.Init();
-			endGame = false;
-			hlList = null;
+			ResetGlobals();
 			ce.Send("ucinewgame");
 			lm.ChangeSide(LM_SIDE_M);
 			cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
@@ -681,6 +708,7 @@ function DownloadReady(RequestID)
 
 function OnTimer()
 {
+	//TODO: se non ricevo per tot volte, disabilita dita
 	//receive packet
 	lm.UpdatePos(&palm_pos, &f0_pos, &f1_pos);
 
