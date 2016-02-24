@@ -372,7 +372,7 @@ function Update_Gameplay()
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		endGame = cb.totalMovesCounter == 3; //TODO::DELETEME!!!
+		//endGame = cb.totalMovesCounter == 3; //TODO::DELETEME!!!
 		//CameraMoveMouse();
 	}
 	else
@@ -548,13 +548,14 @@ function Update_Endscreen()
 {
 
 	CameraSetPosition(vectorRotate(-0.01, 0, 1, 0,CameraGetPosition()));
-
+	cb.OnFrame();
 
 
 	//Disappear pieces
 	for(var i = 0; i<16; i++)
 	{
-		if(!(i == 7 || cb.turn == CP_W) || !(cb.turn == CP_B && cb.wPieces[i].position == cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		//if(!(i == 7 || cb.turn == CP_W) || !(cb.turn == CP_B && cb.wPieces[i].position == cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		if(i != 7 && !(cb.turn == CP_B && cb.wPieces[i].position == cb.latestMove[3].position))
 		{
 			var wo = cb.wPieces[i].obj;
 			var woPos = wo.GetPosition();
@@ -562,7 +563,8 @@ function Update_Endscreen()
 				wo.SetPosition(woPos[0], woPos[1] - 0.02, woPos[2]);
 		}
 
-		if((i != 7 || cb.turn != CP_B) || (cb.turn != CP_W || cb.bPieces[i].position != cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		//if((i != 7 || cb.turn != CP_B) || (cb.turn != CP_W || cb.bPieces[i].position != cb.latestMove[3].position))// && cb.wPieces[i].position == cb.latestMove[3].position))
+		if(i != 7 && !(cb.turn == CP_W && cb.bPieces[i].position == cb.latestMove[3].position))
 		{
 			var bo = cb.bPieces[i].obj;
 			var boPos = bo.GetPosition();
@@ -620,6 +622,7 @@ function Update_Endscreen()
 			cb.Init();
 			endGame = false;
 			hlList = null;
+			ce.Send("ucinewgame");
 			lm.ChangeSide(LM_SIDE_M);
 			cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
 			scene = S_STARTSCREEN;
