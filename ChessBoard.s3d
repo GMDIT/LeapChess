@@ -161,6 +161,11 @@ function ChessBoard::Init()
                 bPieces[i].obj.SetPosition(bPos[0], 50, bPos[2]);
                 wPieces[i].isDropping = true;
                 bPieces[i].isDropping = true;
+
+                //alternative
+                //wPieces[i].SetXYPos([-160, 0, 160], 320);
+                //bPieces[i].SetXYPos([-160, 0, 160], 320);
+
             }
         }
 }
@@ -242,7 +247,7 @@ function ChessBoard::DropPieces()
 
             if(distX != 0)
             {
-                decrX = CalcDecr(th, drop_step, distX);
+                decrX = CalcDecr(0.03, drop_step, distX);
 
                 /*
                 if(0.1 < distX)
@@ -253,7 +258,7 @@ function ChessBoard::DropPieces()
             }
             if(distZ != 0)
             {
-                decrZ = CalcDecr(th, drop_step, distZ);
+                decrZ = CalcDecr(0.03, drop_step, distZ);
 
             /*
                 if(0.1 < distZ)
@@ -330,7 +335,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
             if(p.type == CP_KING)
                 Castle(p, oldPos);
 
-            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
+            latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos), p};
 
             EndTurn();
         }
@@ -367,6 +372,7 @@ function ChessBoard::EatPieceIn(pos)
 
     eatedCounters[c] = e+1;
     p.position = -1;
+    p.moved = true;
     //cbMatrix[pos] = Void;
 }
 
@@ -750,7 +756,7 @@ function ChessBoard::MovePieceToPos(p, newPos, end)
         if(p.type == CP_KING)
             Castle(p, oldPos);
 
-        latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos)};
+        latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos), p};
 
         if(end)
             EndTurn(); //TODO:WARNING!!! Promotion only at the end of animation, fix it!
