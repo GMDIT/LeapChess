@@ -33,7 +33,7 @@ var res_y = 900;
 var scene = S_STARTSCREEN;
 
 /* GUI */
-var b_title, g_title;
+var b_title, m_title, g_title;
 var g_title_pos = [0,10,0];
 var g_title_dim = [5.13, 1.33];
 var g_dim = [5.13, 0.71];
@@ -151,6 +151,7 @@ function OnDownload()
 
 	//FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
 	FileDownload("gui.zip");
+	FileDownload("3dui.zip");
 	FileDownload("chessSet.zip");
 	FileDownload("textures.zip");
 	FileDownload("g_lowres_skybox.zip");
@@ -264,9 +265,12 @@ function OnInit(params)
 	LoadSkyboxTextures();
 
 	/** GUI **/
-	b_title = CVmBillboard("leapchess.png",g_title_dim[0]*1.3,g_title_dim[1]*1.3);
-  	g_title = CVmObj();
-  	g_title.LinkToBillboard(b_title);
+	//b_title = CVmBillboard("leapchess.png",g_title_dim[0]*1.3,g_title_dim[1]*1.3);
+	m_title = CVmNewMesh("leapchess.aam");
+	m_title.CenterBoundingBox();
+	g_title = CVmObj(m_title);
+  	//g_title.LinkToBillboard(b_title);
+	g_title.Normalize(20);
   	g_title.SetPosition(g_title_pos);
 
 	b_bwin = CVmBillboard("blackwin.png",g_dim[0]*1.3,g_dim[1]*1.3);
@@ -377,11 +381,11 @@ function Draw_StartScreen()
 	//Shadow Mapping
 	Draw_Gameplay();
 
-	/*Drawing Scene */
+	/*Drawing Scene
 	SceneBegin(VR_LEAVE_COLOR);
 		glMatrixMode(GL_MODELVIEW);
 		g_title.Draw();
-	SceneEnd();
+	SceneEnd();*/
 }
 
 function Update_Gameplay()
@@ -407,6 +411,10 @@ function Update_Gameplay()
 		var camCurrPos = CameraGetPosition();
 		cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
+
+	var tmpGPos = g_title.GetPosition();
+	if(tmpGPos[1] < 50)
+		g_title.SetPosition(tmpGPos[0], tmpGPos[1] + 0.4, tmpGPos[2]);
 
 	//OutputLN("Turn: ", cb.turn, "--- Player: ", playerColor);
 	if(cb.turn == playerColor)
@@ -535,6 +543,7 @@ function Draw_Gameplay()
 		//glCullFace(GL_BACK);
 
 		shader.Start();
+
 			SetActiveTexture(fbo);
 			shader.SetParameter("shadowMap", 0);
 
@@ -550,6 +559,9 @@ function Draw_Gameplay()
 				cb.wPieces[7].Draw();
 				cb.bPieces[7].Draw();
 			}
+
+			//if(scene == S_STARTSCREEN)
+				g_title.Draw();
 
 			f1.Draw();
 
@@ -947,6 +959,7 @@ function RenderOnTexture()
 			 f0.Draw(VR_NO_TEXTURE);
 			 f1.Draw(VR_NO_TEXTURE);
 			 o_chessboard.Draw(VR_NO_TEXTURE);
+			 //g_title.Draw(VR_NO_TEXTURE);
 
 			cb.DrawPieces(VR_NO_TEXTURE);
 			//for(var i = 0; i < 16; i++)
