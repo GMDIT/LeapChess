@@ -117,6 +117,7 @@ function ChessBoard::Init()
     eatedCounters = {0,0};
     cbMatrix = Array(64);
     isDropping = false;
+    latestMove = null;
 
     wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
 	wPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, wMaterial);

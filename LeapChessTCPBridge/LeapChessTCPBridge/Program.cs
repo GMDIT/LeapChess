@@ -11,7 +11,7 @@ namespace LeapChessTCPBridge
 {
     class Program
     {
-        static String ReadOutput(StreamReader reader)
+        static String ReadOutput(StreamReader reader, bool print = true)
         {
             StringBuilder str = new StringBuilder();
             reader.DiscardBufferedData();
@@ -21,7 +21,9 @@ namespace LeapChessTCPBridge
             }
             str.Append("\n");
 
-            Console.WriteLine("engine << " + str.ToString());
+            if(print)
+                Console.WriteLine("engine << " + str.ToString());
+            
             return str.ToString().Trim();
         }
         
@@ -99,29 +101,37 @@ namespace LeapChessTCPBridge
 
                     //send to engine
                     myStreamWriter.Write(data + "\n");
-                    //start thinking
-                    myStreamWriter.Write("go\nd\n");
-                    System.Threading.Thread.Sleep(100);
-                    //read engine output
-                    o = ReadOutput(myStreamReader);
 
-                    //TODO: it works, but is veeeery ugly
-                    var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
-                    var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries); //TODO: what if there isn't bestmove?
+                    if (data != "ucinewgame")
+                    {
+                        //start thinking
+                        myStreamWriter.Write("go\n");
+                        System.Threading.Thread.Sleep(100);
+                        //read engine output
+                        o = ReadOutput(myStreamReader);
 
-                    Console.WriteLine(">>" + bestmove[1]);
-                    byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
+                        //TODO: it works, but is veeeery ugly
+                        var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
+                        var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries); //TODO: what if there isn't bestmove?
 
-                    // Send engine output to tcp
-                    stream.Write(msg, 0, msg.Length);
-                    Console.WriteLine("Sent");//: {0}", o);
+                        Console.WriteLine("best move>>" + bestmove[1]);
+                        byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
 
-                    //Send to engine the bestmove
-                    myStreamWriter.Write(data + " {0}\nd\n", bestmove[1]);
-                    System.Threading.Thread.Sleep(100);
-                    //read engine output
-                    Console.WriteLine("Updated status: {0} {1} d ", data, bestmove[1]);
-                    o = ReadOutput(myStreamReader);
+                        // Send engine output to tcp
+                        stream.Write(msg, 0, msg.Length);
+                        Console.WriteLine("Sent");//: {0}", o);
+
+                        //Send to engine the bestmove
+                        myStreamWriter.Write(data + " {0}\nd\n", bestmove[1]);
+                        System.Threading.Thread.Sleep(100);
+                        //read engine output
+                        Console.WriteLine("Updated status: {0} {1} d ", data, bestmove[1]);
+                        o = ReadOutput(myStreamReader);
+
+                    }
+                    else
+                        Console.WriteLine("************* Starting new game *************");
+
                 }
             }
             catch (Exception e)
