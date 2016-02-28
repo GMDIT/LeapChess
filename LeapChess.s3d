@@ -37,13 +37,15 @@ var b_title, m_title, g_title;
 var g_title_pos = [0,10,0];
 var g_title_dim = [5.13, 1.33];
 var g_dim = [5.13, 0.71];
-var b_bwin, g_bwin;
-var b_wwin, g_wwin;
-var g_win_pos = [0, 16, 0];
-var b_newgame, g_newgame;
-var g_newgame_pos = [0, 8, 0];
-var b_exit, g_exit;
-var g_exit_pos = [0, 1, 0];
+var b_bwin, m_bwin, g_bwin;
+var b_wwin, m_wwin, g_wwin;
+var m_win, g_win;
+var g_cwin_pos = [-5, 16, -5];
+var g_win_pos = [-5, 16, 3];
+var b_newgame, m_newgame, g_newgame;
+var g_newgame_pos = [-2, 8, 0];
+var b_exit, m_exit, g_exit;
+var g_exit_pos = [-2, 1, 0];
 
 
 /*ChessEngine server data */
@@ -273,25 +275,51 @@ function OnInit(params)
 	g_title.Normalize(20);
   	g_title.SetPosition(g_title_pos);
 
-	b_bwin = CVmBillboard("blackwin.png",g_dim[0]*1.3,g_dim[1]*1.3);
-  	g_bwin = CVmObj();
-  	g_bwin.LinkToBillboard(b_bwin);
-  	g_bwin.SetPosition(g_win_pos);
+	//b_bwin = CVmBillboard("blackwin.png",g_dim[0]*1.3,g_dim[1]*1.3);
+	m_bwin = CVmNewMesh("black.aam");
+	m_bwin.SetMaterial(MGetBlack());
+	m_bwin.CenterBoundingBox();
+	g_bwin = CVmObj(m_bwin);
+  	//g_bwin.LinkToBillboard(b_bwin);
+	g_bwin.Normalize(16);
+  	g_bwin.SetPosition(g_cwin_pos);
+	g_bwin.Rotate(90, 1, 0, 0); //TODO: rotate the model!
 
-	b_wwin = CVmBillboard("whitewin.png",g_dim[0]*1.3,g_dim[1]*1.3);
-  	g_wwin = CVmObj();
-  	g_wwin.LinkToBillboard(b_wwin);
-  	g_wwin.SetPosition(g_win_pos);
+	//b_wwin = CVmBillboard("whitewin.png",g_dim[0]*1.3,g_dim[1]*1.3);
+	m_wwin = CVmNewMesh("white.aam");
+	m_wwin.SetMaterial(MGetWhite());
+	m_wwin.CenterBoundingBox();
+	g_wwin = CVmObj(m_wwin);
+  	//g_bwin.LinkToBillboard(b_bwin);
+	g_wwin.Normalize(16);
+  	g_wwin.SetPosition(g_cwin_pos);
+	g_wwin.Rotate(90, 1, 0, 0); //TODO: rotate the model!
 
-	b_newgame = CVmBillboard("newgame.png",g_dim[0]*1.3,g_dim[1]*1.3);
-  	g_newgame = CVmObj();
-  	g_newgame.LinkToBillboard(b_newgame);
+	m_win = CVmNewMesh("wins.aam");
+	m_win.CenterBoundingBox();
+	g_win = CVmObj(m_win);
+  	//g_bwin.LinkToBillboard(b_bwin);
+	g_win.Normalize(14);
+  	g_win.SetPosition(g_win_pos);
+	g_win.Rotate(90, 1, 0, 0); //TODO: rotate the model!
+
+	//b_newgame = CVmBillboard("newgame.png",g_dim[0]*1.3,g_dim[1]*1.3);
+	m_newgame = CVMNewMesh("newgame.aam");
+	m_newgame.CenterBoundingBox();
+	g_newgame = CVmObj(m_newgame);
+  	//g_newgame.LinkToBillboard(b_newgame);
+	g_newgame.Normalize(12);
   	g_newgame.SetPosition(g_newgame_pos);
+	g_newgame.Rotate(90, 1, 0, 0); //TODO: rotate the model!
 
-	b_exit = CVmBillboard("exit.png",g_dim[0]*1.3,g_dim[1]*1.3);
-  	g_exit = CVmObj();
-  	g_exit.LinkToBillboard(b_exit);
+	//b_exit = CVmBillboard("exit.png",g_dim[0]*1.3,g_dim[1]*1.3);
+	m_exit = CVMNewMesh("exit.aam");
+	m_exit.CenterBoundingBox();
+  	g_exit = CVmObj(m_exit);
+  	//g_exit.LinkToBillboard(b_exit);
+	g_exit.Normalize(6);
   	g_exit.SetPosition(g_exit_pos);
+	g_exit.Rotate(90, 1, 0, 0); //TODO: rotate the model!
 }
 
 var touchTimer = 0;
@@ -306,6 +334,22 @@ function ResetGlobals()
 	f1_pos = [-100,20.0,0.0];
 	hlList = null;
 	lglMoves = null;
+	if(playerColor != CP_W)
+	{
+		g_win.Rotate(90, 0, 0, 1);
+		g_wwin.Rotate(90, 0, 0, 1);
+		g_bwin.Rotate(90, 0, 0, 1);
+		g_newgame.Rotate(90, 0, 0, 1);
+		g_exit.Rotate(90, 0, 0, 1);
+	}
+	else
+	{
+		g_win.Rotate(-90, 0, 0, 1);
+		g_wwin.Rotate(-90, 0, 0, 1);
+		g_bwin.Rotate(-90, 0, 0, 1);
+		g_newgame.Rotate(-90, 0, 0, 1);
+		g_exit.Rotate(-90, 0, 0, 1);
+	}
 	playerColor = CP_W;
 	endGame = false;
 	mov_gripping = false;
@@ -323,6 +367,12 @@ function Update_Startscreen()
 {
 	//CameraMoveMouse();
 	//OutputLN(CameraGetPosition());
+
+	/* TITLE ANIMATION */
+	var tmpGPos = g_title.GetPosition();
+	if(tmpGPos[1] > g_title_pos[1])
+		g_title.SetPosition(tmpGPos[0], tmpGPos[1] - 0.8, tmpGPos[2]);
+	/*******************************************/
 
 	if(!fingerEnabled)
 	{
@@ -372,6 +422,23 @@ function Update_Startscreen()
 		//CameraSetPosition(CamPos[playerColor]);
 		//MoveCameraAndTarget(CamPos, CamTarget, 240);
 		scene = S_GAMEPLAY;
+
+		if(playerColor == CP_W)
+		{
+			g_win.Rotate(90, 0, 0, 1);
+			g_wwin.Rotate(90, 0, 0, 1);
+			g_bwin.Rotate(90, 0, 0, 1);
+			g_newgame.Rotate(90, 0, 0, 1);
+			g_exit.Rotate(90, 0, 0, 1);
+		}
+		else
+		{
+			g_win.Rotate(-90, 0, 0, 1);
+			g_wwin.Rotate(-90, 0, 0, 1);
+			g_bwin.Rotate(-90, 0, 0, 1);
+			g_newgame.Rotate(-90, 0, 0, 1);
+			g_exit.Rotate(-90, 0, 0, 1);
+		}
 	}
 
 }
@@ -390,14 +457,17 @@ function Draw_StartScreen()
 
 function Update_Gameplay()
 {
-	/******************
-	*      UPDATE     *
-	*******************/
+	/* TITLE ANIMATION */
+	var tmpGPos = g_title.GetPosition();
+	if(tmpGPos[1] < 40)
+		g_title.SetPosition(tmpGPos[0], tmpGPos[1] + 0.4, tmpGPos[2]);
+	/******************************************/
+
 	cb.OnFrame();
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		endGame = cb.totalMovesCounter == 3; //TODO::DELETEME!!!
+		endGame = cb.totalMovesCounter == 2; //TODO::DELETEME!!!
 		//CameraMoveMouse();
 	}
 	else
@@ -412,9 +482,6 @@ function Update_Gameplay()
 		cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
 
-	var tmpGPos = g_title.GetPosition();
-	if(tmpGPos[1] < 50)
-		g_title.SetPosition(tmpGPos[0], tmpGPos[1] + 0.4, tmpGPos[2]);
 
 	//OutputLN("Turn: ", cb.turn, "--- Player: ", playerColor);
 	if(cb.turn == playerColor)
@@ -568,6 +635,19 @@ function Draw_Gameplay()
 			o_table.Draw();
 			o_chessboard.Draw();
 
+
+			if(scene == S_ENDSCREEN)
+			{
+				if(cb.turn == CP_W)
+					g_bwin.Draw();
+				else
+					g_wwin.Draw();
+
+				g_win.Draw();
+				g_newgame.Draw();
+				g_exit.Draw();
+			}
+
 		shader.Stop();
 
 		//Draw transparent objs
@@ -629,24 +709,24 @@ function Update_Endscreen()
 		touchElem = -1;
 		f1.ForceMaterial(MGetWhite());
 
-		if(touchTimer == 1)
-			cm.Add(CameraGetCurrent(), CameraGetPosition(), g_exit_pos);
+		//if(touchTimer == 1)
+		//	cm.Add(CameraGetCurrent(), CameraGetPosition(), g_exit_pos);
 	}
 	else if(f1Pos[1] > 7 && f1Pos[1] < 12)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
 		touchTimer++;
 		touchElem = S_STARTSCREEN;
 		f1.ForceMaterial(MGetBlack());
-		if(touchTimer == 1)
-			cm.Add(CameraGetCurrent(), CameraGetPosition(), g_newgame_pos);
+		//if(touchTimer == 1)
+		//	cm.Add(CameraGetCurrent(), CameraGetPosition(), g_newgame_pos);
 	}
 	else
 	{
 		touchTimer = 0;
 		f1.ForceMaterial();
 
-		var camCurrPos = CameraGetPosition();
-		cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
+		//var camCurrPos = CameraGetPosition();
+		//cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
 
 	if(touchTimer > 220)
@@ -675,7 +755,7 @@ function Draw_EndScreen()
 	//Shadow Mapping
 	Draw_Gameplay();
 
-	/*Drawing Scene */
+	/*Drawing Scene
 	SceneBegin(VR_LEAVE_COLOR);
 		glMatrixMode(GL_MODELVIEW);
 
@@ -684,10 +764,12 @@ function Draw_EndScreen()
 		else
 			g_wwin.Draw();
 
+		g_win.Draw();
 		g_newgame.Draw();
 		g_exit.Draw();
 
 	SceneEnd();
+	*/
 }
 function OnFrame()
 {
