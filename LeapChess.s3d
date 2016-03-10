@@ -35,15 +35,15 @@ var scene = S_STARTSCREEN;
 /* GUI */
 var b_title, m_title, g_title;
 var g_title_pos = [0,10,0];
-var g_title_dim = [5.13, 1.33];
-var g_dim = [5.13, 0.71];
+//var g_title_dim = [5.13, 1.33];
+//var g_dim = [5.13, 0.71];
 var b_bwin, m_bwin, g_bwin;
 var b_wwin, m_wwin, g_wwin;
 var m_win, g_win;
-var g_cwin_pos = [-5, 16, -5];
-var g_win_pos = [-5, 16, 3];
+var g_cwin_pos = [0, 16, 0];
+var g_win_pos = [0, 13, 0];
 var b_newgame, m_newgame, g_newgame;
-var g_newgame_pos = [-2, 8, 0];
+var g_newgame_pos = [-2, 7, 0];
 var b_exit, m_exit, g_exit;
 var g_exit_pos = [-2, 1, 0];
 
@@ -467,7 +467,7 @@ function Update_Gameplay()
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		endGame = cb.totalMovesCounter == 2; //TODO::DELETEME!!!
+		//endGame = cb.totalMovesCounter == 2; //TODO::DELETEME!!!
 		//CameraMoveMouse();
 	}
 	else
