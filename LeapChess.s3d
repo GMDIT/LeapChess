@@ -8,9 +8,14 @@
 #include "Materials.s3d"
 #include "Skybox.s3d"
 #include "LeapMotion.s3d"
-#include "MarcelloUtils.s3d"
+//#include "MarcelloUtils.s3d"
 #include "Cameraman.s3d"
 
+//FOR OCULUS
+#include "OVR.s3d"
+#define __COMPILEMARCELLOUTILS
+#include "Marcelloutils.s3d"
+////////////////////////
 
 /* Set global scene parameters */
 SET SCENE_FOV  = 60;
@@ -163,6 +168,12 @@ function OnDownload()
 
 function OnInit(params)
 {
+	//FOR OCULUS
+	SceneSetParam(VR_HEADTRACKER,2);
+   SceneSetParam(VR_TRACKER_POSITION,0.0,0,2.0);
+   SceneSetParam(VR_SCREEN_SIZE,2.2,1.65);
+	//////////////////////////
+
 	SetFrameRate(60);
 	SetAmbientLight(0.2,0.2,0.1);
 
@@ -778,22 +789,156 @@ function OnFrame()
 	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
 
 	cm.Update();
-
 	switch(scene)
 	{
 		case S_STARTSCREEN:
 			Update_Startscreen();
-			Draw_StartScreen();
 			break;
 		case S_GAMEPLAY:
 			Update_Gameplay();
-			Draw_Gameplay();
 			break;
 		case S_ENDSCREEN:
 			Update_Endscreen();
-			Draw_EndScreen();
 			break;
 	}
+
+	//test OCULUS
+	//Shadow Mapping
+    RenderOnTexture();
+    CameraActivate(SCENE_CAMERA);
+	SceneBeginRel( 0.0,0.0 , 0.5,1.0 ,VR_STEREO_LEFT);
+
+	  //RenderSkybox();
+
+	  if(scene == S_GAMEPLAY)
+	  {
+		  if(mov_moving)
+			  DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
+			  else
+			  DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
+
+		  palm.Draw();
+	  }
+
+	  FillTextureMatrix();
+	  //glCullFace(GL_FRONT);
+	  glMatrixMode(GL_MODELVIEW);
+	  //glCullFace(GL_BACK);
+
+	  shader.Start();
+
+		  SetActiveTexture(fbo);
+		  shader.SetParameter("shadowMap", 0);
+
+		  if(scene != S_STARTSCREEN)
+		  {
+			  cb.DrawPieces();
+
+			  if(scene == S_GAMEPLAY)
+				  f0.Draw();
+		  }
+		  else if(scene == S_STARTSCREEN)
+		  {
+			  cb.wPieces[7].Draw();
+			  cb.bPieces[7].Draw();
+		  }
+
+		  //if(scene == S_STARTSCREEN)
+			  g_title.Draw();
+
+		  f1.Draw();
+
+		  o_table.Draw();
+		  o_chessboard.Draw();
+
+
+		  if(scene == S_ENDSCREEN)
+		  {
+			  if(cb.turn == CP_W)
+				  g_bwin.Draw();
+			  else
+				  g_wwin.Draw();
+
+			  g_win.Draw();
+			  g_newgame.Draw();
+			  g_exit.Draw();
+		  }
+
+	  shader.Stop();
+
+	  //Draw transparent objs
+	  if(hlList != null)
+		  DrawHighlightSquares();
+   	SceneEnd();
+    SceneBeginRel( 0.5,0.0 , 0.5,1.0 ,VR_STEREO_RIGHT);
+	//RenderSkybox();
+
+	if(scene == S_GAMEPLAY)
+	{
+		if(mov_moving)
+			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
+			else
+			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
+
+		palm.Draw();
+	}
+
+	FillTextureMatrix();
+	//glCullFace(GL_FRONT);
+	glMatrixMode(GL_MODELVIEW);
+	//glCullFace(GL_BACK);
+
+	shader.Start();
+
+		SetActiveTexture(fbo);
+		shader.SetParameter("shadowMap", 0);
+
+		if(scene != S_STARTSCREEN)
+		{
+			cb.DrawPieces();
+
+			if(scene == S_GAMEPLAY)
+				f0.Draw();
+		}
+		else if(scene == S_STARTSCREEN)
+		{
+			cb.wPieces[7].Draw();
+			cb.bPieces[7].Draw();
+		}
+
+		//if(scene == S_STARTSCREEN)
+			g_title.Draw();
+
+		f1.Draw();
+
+		o_table.Draw();
+		o_chessboard.Draw();
+
+
+		if(scene == S_ENDSCREEN)
+		{
+			if(cb.turn == CP_W)
+				g_bwin.Draw();
+			else
+				g_wwin.Draw();
+
+			g_win.Draw();
+			g_newgame.Draw();
+			g_exit.Draw();
+		}
+
+	shader.Stop();
+
+	//Draw transparent objs
+	if(hlList != null)
+		DrawHighlightSquares();
+		SceneEnd();
+
+	return;
+
+	///////////////
+
+
 }
 
 function DownloadReady(RequestID)

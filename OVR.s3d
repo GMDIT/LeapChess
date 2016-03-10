@@ -1,0 +1,865 @@
+// Oculus Wrapper Class and Functions
+// Written by SSSA
+// (C) 2013-2014
+// Contact: f.tecchia@sssup.it, m.carrozzino@sssup.it, g.avveduto@sssup.it
+
+
+/* KEYBOARD Mapping */
+/*
+	"+,-": handle the scale of the room model
+	
+	"0": reset tracker's view direction
+	"P": enable oculus movement prediction
+	"O": disable oculus movement prediction
+*/
+
+#define _HRES 1280
+#define _VRES 800
+
+//var tr_active = false; //Optitrack active
+//var tr_offset = [0,0.15,0.09]; //Tracker offset from eyes to marker +x:right, +y:up, -z:front
+
+
+//=================================================
+// Class OVR
+//=================================================
+
+class OVR{
+	
+	var OculusDLL;
+
+	var HRes;
+	var VRes;
+	var HSize;
+	var VSize;
+	
+	var IPD;
+	
+	var EyeToScreenDistance;
+	var LensSeparationDistance;
+	var Scale, ScaleIn;
+	var projLensShift;
+	var DistK, ChromaK;	
+	var qX,qY,qZ,qW;	
+	
+	var finalScale;
+	var aspectRatio;
+	var yFov;
+	var near;
+	var far;
+		
+	var projectionMatrixL;
+	var projectionMatrixR;
+	var projectionMatrixC;
+	
+	var halfIPD;
+
+	var modelViewL;
+	var modelViewR;
+	var predicted;
+	
+	var computeAddDistortion;
+	var externDscale;
+	
+	var eye_rot_offset;
+	var tracker_active;
+	var tracker_offset;
+	var correctFBOres;
+	
+	var FBO;
+	var SH;
+	var separation;
+	var ScreenCenterL, LensCenterL, ScreenCenterR, LensCenterR;
+	var inverted_map;	
+	
+	init();
+	initDLL();
+	InitialiseRift();
+	GetDistorsionParams();
+	GetChromaDistorsionParams();
+	GetRotation();	
+	ResetDir();
+	ComputeOculusMatrices();
+	GetProjectionMatrixL();
+	GetProjectionMatrixR();
+	GetModelViewMatrixL();
+	GetModelViewMatrixR();
+	GetPerspectiveMatrixRH(yFov,aspect,zNear,zFar);
+	EnablePrediction(value);
+	EnableMagnetometer();
+	DisableMagnetometer();
+	
+	RotateCamera(camera,mouseangles);
+	ActivateTracker(enable);
+	SetTrackerOffset(tracker_off);
+	GetPosition(tracker_pos, tracker_off);
+	
+	drawFbo(currentEye);
+	OSceneBeginLeft();
+	OSceneBeginRight();
+	OSceneEnd();
+	OSceneDraw();
+	
+	warpLeft(in01);
+	warpRight(in01);
+	
+	initInversion();
+	invert(in01);
+};
+
+
+
+function OVR::OVR()
+{
+	HRes = _HRES;
+	VRes = _VRES;
+	
+	HSize= 0.14976;
+	VSize= 0.0936;
+	EyeToScreenDistance= 0.041;
+	LensSeparationDistance= 0.0635;
+	DistK = [1 , 0.22 , 0.24 , 0]; //TODO
+	ChromaK = [0.996 , -0.004 , 1.014 , 0];
+	qX	= 0.0;
+	qY	= 0.0;
+	qZ	= 0.0;
+	qW	= 1.0;
+	near = 0.01;
+	far = 1000.0;
+	IPD = 0.0646;
+	externdscale=1.135; //FRANCO
+	
+	eye_rot_offset = [0.0,0.15,-0.09];
+	tracker_active = false;
+	tracker_offset = [0.0,0.0,0.0];
+		
+
+	predicted = true;		
+}
+
+
+function OVR::initInversion()
+{
+	inverted_map  = array(_HRES);
+	for (var i=0; i<_HRES/2; i++)
+	{
+		inverted_map[i] = array(_VRES);
+	 	for(var j=0; j<_VRES; j++)
+			inverted_map[i][j] = warpleft([i/tofloat(_HRES),j/tofloat(_VRES)]);
+	}
+	for (var i=_HRES/2; i<_HRES; i++)
+	{
+		inverted_map[i] = array(_VRES);
+		for(var j=0; j<_VRES; j++)
+		 	inverted_map[i][j] = warpright([i/tofloat(_HRES),j/tofloat(_VRES)]);		 
+	}
+}
+
+function OVR::invert(coords)
+{
+	var in01 = vector(2);
+	in01.x = coords.x / tofloat(_HRES);
+	in01.y = 1.0-(coords.y / tofloat(_VRES));
+			
+	if(in01.x<=0 || in01.x>=1.0 || in01.y<=0 || in01.y>=1.0)
+		return [-1,-1];
+	return inverted_map[in01.x*_HRES][in01.y*_VRES -1];
+}
+
+
+function OVR::init()
+{
+	initDLL();	
+	InitialiseRift();
+	initInversion();
+}
+
+
+function OVR::initDLL()
+{
+	OculusDLL = CVmExternDLL("OculusDll.dll");
+	
+	OculusDLL.__AddFunction( C_INT, "OVR_Initialize");
+	OculusDLL.__AddFunction( C_INT, "OVR_Destroy");
+	OculusDLL.__AddFunction( C_INT, "OVR_GetScreenResolution",C_PINT,C_PINT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetScreenSize",C_PFLOAT,C_PFLOAT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetEyeToScreenDistance",C_PFLOAT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetInterpupillaryDistance",C_PFLOAT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetLensSeparationDistance",C_PFLOAT);	
+	OculusDLL.__AddFunction( C_INT, "OVR_GetDistortionCoefficients",C_PFLOAT,C_PFLOAT,C_PFLOAT,C_PFLOAT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetChromaDistortionCoefficients",C_PFLOAT,C_PFLOAT,C_PFLOAT,C_PFLOAT);
+	//sensor related
+	OculusDLL.__AddFunction( C_INT, "OVR_GetSensorCount");
+	OculusDLL.__AddFunction( C_INT, "OVR_GetSensorOrientation",C_INT,C_PFLOAT,C_PFLOAT,C_PFLOAT,C_PFLOAT);
+	OculusDLL.__AddFunction( C_INT, "OVR_GetSensorPredictedOrientation",C_INT,C_PFLOAT,C_PFLOAT,C_PFLOAT,C_PFLOAT);
+	OculusDLL.__AddFunction( C_VOID,"OVR_ResetSensorOrientation",C_INT);
+	OculusDLL.__AddFunction( C_INT, "OVR_EnableMagnetometer",C_INT,C_INT);
+}
+
+function OVR::EnablePrediction(value)
+{
+	predicted=value;
+}
+
+function OVR::EnableMagnetometer()
+{
+	var sensorCount = OculusDLL.OVR_GetSensorCount();
+	
+	if(sensorCount==0)
+		return false;
+	if(OculusDLL.OVR_EnableMagnetometer(sensorCount-1,1)==0)
+	{
+		Outputln("Magnetometer calibration not found. Use provided OculusConfigUtil");
+		return false;
+	}
+	else
+		return true;	
+}
+
+
+function OVR::DisableMagnetometer()
+{
+	var sensorCount = OculusDLL.OVR_GetSensorCount();
+	if(sensorCount==0)
+		return false;
+	if(OculusDLL.OVR_EnableMagnetometer(sensorCount-1,0)==0)
+		return true;
+	else return false;
+}
+
+
+function OVR::InitialiseRift()
+{
+	OculusDLL.OVR_Initialize();
+	var sensorCount = OculusDLL.OVR_GetSensorCount();
+	//trace(sensorCount);
+	if(sensorCount==0)
+	{
+		outputln("");
+		outputln("====================");
+		outputln("Oculus Not Detected!");
+		outputln("====================");
+	}
+	else
+	{
+		OculusDLL.OVR_GetScreenResolution (&HRes,&VRes);
+		OculusDLL.OVR_GetInterpupillaryDistance(&IPD);
+		OculusDLL.OVR_GetScreenSize (&HSize, &VSize);
+		OculusDLL.OVR_GetEyeToScreenDistance(&EyeToScreenDistance);
+
+		OculusDLL.OVR_GetLensSeparationDistance(&LensSeparationDistance);
+
+		OculusDLL.OVR_GetDistortionCoefficients(&DistK[0],&DistK[1],&DistK[2],&DistK[3]);
+		OculusDLL.OVR_GetChromaDistortionCoefficients(&ChromaK[0],&ChromaK[1],&ChromaK[2],&ChromaK[3]);
+	}
+	outputln("OCULUS PARAMETERS :");	
+	outputln("SensorCount: " ,  sensorCount);
+	outputln("resolution : " , HRes , " x " , VRes);
+	Outputln("InterpupillarDist : " , IPD );
+	outputln("screenSize : " , HSize , " x " , VSize);
+	outputln("EtoScreenD : " , EyeToScreenDistance );
+	outputln("Lseparation: " , LensSeparationDistance );
+	outputln("Dist Coefs : " , DistK[0] , "  " , DistK[1] ,"  ", DistK[2] , "  " , DistK[3]);
+	outputln("Chroma Coefs : " , ChromaK[0] , "  " , ChromaK[1] ,"  ", ChromaK[2] , "  " , ChromaK[3]);
+	outputln("===========================================================");
+	
+	
+	//Computing Oculus Params
+	var w 			= 0.5; //one eye width
+	var h 			= 1.0; 
+	projLensShift 	= 0.1453; //for the Oculus DK
+	ScreenCenterL  	= [0.25, 0.5];	
+	LensCenterL    	= [0.25 + projLensShift*0.5*0.5, 0.5];
+	ScreenCenterR  	= [0.75, 0.5];
+	LensCenterR    	= [0.75 - projLensShift*0.5*0.5, 0.5];
+	var scaleradius = (-0.5-projLensShift*0.5);
+	var rsq 		= scaleradius*scaleradius;
+	var factor 		=  DistK[0] + DistK[1]*rsq + DistK[2]*rsq*rsq + DistK[3]*rsq*rsq*rsq;
+	aspectRatio 	= (Hsize/Vsize)*0.5;
+	finalScale 		= 0.645; //Scale usato per ingrandire le proiezioni per coprire l'intero schermo	
+	Scale          	= [w*0.5/factor, h*0.5*aspectRatio/factor] *finalScale;
+	ScaleIn        	= [2/w, (2/h)/aspectRatio];
+	
+	outputln("A");
+			
+	trace(scale,scalein,distk,chromak);
+	
+	//Init Oculus Shader
+	SH = CVmShaderProgram("rif.sh");
+	SH.Activate(true);	
+	SH.Start();	
+	SH.SetParameter("Texture",FBO);
+	SH.SetParameter("Scale",Scale);
+	SH.SetParameter("ScaleIn",ScaleIn);
+	SH.SetParameter("HmdWarpParam",DistK);
+	SH.SetParameter("ChromAbParam",ChromaK);
+	SH.Stop();
+	
+	// Init FBO
+	var oculusRes = [_HRES,_VRES];
+	correctFBOres = oculusRes*(1.0/finalScale);
+	FBO = CVmFbo(VR_FBO_COLOR_Z,correctFBOres.x,correctFBOres.y);
+	Outputln("FBO Resolution: "+str(correctFBOres.x)+"x"+str(correctFBOres.y));
+	FBO.EnableMultisampling(true);
+	
+	ComputeOculusMatrices();
+
+}
+
+
+function OVR::warpLeft (in01)
+{	
+	var theta = [(in01.x - LensCenterL.x) * ScaleIn.x, (in01.y - LensCenterL.y) * ScaleIn.y]; // Scales to [-1, 1]
+	
+	//var scaleradius = (-0.5-projLensShift*0.5);
+	//var rsq = scaleradius*scaleradius;			
+	var rSq = theta.x * theta.x + theta.y * theta.y;	
+    var hmdwarpparam = DistK;
+    
+    var rvector = theta * ( HmdWarpParam.x + 
+							HmdWarpParam.y * rSq +
+							HmdWarpParam.z * rSq * rSq +
+							HmdWarpParam.w * rSq * rSq * rSq);
+   	
+   	return LensCenterL + [Scale.x * rvector.x, Scale.y * rvector.y] ;
+}
+
+
+function OVR::warpRight (in01)
+{	
+	var theta = [(in01.x - LensCenterR.x) * ScaleIn.x, (in01.y - LensCenterR.y) * ScaleIn.y]; // Scales to [-1, 1]
+	var scaleradius = (-0.5-projLensShift*0.5);
+	var rsq = scaleradius*scaleradius;		
+    var hmdwarpparam = DistK;
+    
+    var rvector = theta * (HmdWarpParam.x + 
+							HmdWarpParam.y * rSq +
+							HmdWarpParam.z * rSq * rSq +
+							HmdWarpParam.w * rSq * rSq * rSq);
+   	
+   	return LensCenterR + [Scale.x * rvector.x, Scale.y * rvector.y] ;
+}
+
+function OVR::ResetDir()
+{
+	var sensorCount = OculusDLL.OVR_GetSensorCount();
+	if(sensorCount==0)
+		return;
+		
+	OculusDLL.OVR_ResetSensorOrientation(sensorCount-1);
+}
+
+
+function OVR::GetRotation()
+{
+	var sensorCount = OculusDLL.OVR_GetSensorCount();
+	if(sensorCount==0){
+		return [0,0,0,1];
+	}
+	if(predicted){
+		OculusDLL.OVR_GetSensorPredictedOrientation(sensorCount-1,&qW,&qX,&qY,&qZ);
+	}else{
+		OculusDLL.OVR_GetSensorOrientation(sensorCount-1,&qW,&qX,&qY,&qZ);
+		}
+	var quat = [qX,qY,qZ,qW];
+	return quat;
+}
+
+function OVR::GetPerspectiveMatrixRH(yFov,aspect,zNear,zFar)
+{
+	var m = vector(16);
+	m = MatrixIdentity_4();
+	
+    var tanHalfFov = tan(yFov * 0.5);
+ 
+    m[0] = 1.0 / (aspect * tanHalfFov);
+    m[5] = 1.0 / tanHalfFov;
+    m[10] = zfar / (znear - zfar);
+    m[11] = -1.0;
+    m[14] = (zfar * znear) / (znear - zfar);
+    m[15] = 0.0;
+
+    // Note: Post-projection matrix result assumes Left-Handed coordinate system,    
+    //       with Y up, X right and Z forward. This supports positive z-buffer values.
+    // This is the case even for RHS cooridnate input.   
+    outputln(" ProjectionMatrixC: ");    
+    outputln(m[0], "       ", m[4], "       ", m[8], "       ", m[12]);    
+    outputln(m[1], "       ", m[5], "       ", m[9], "       ", m[13]);
+    outputln(m[2], "       ", m[6], "       ", m[10], "       ", m[14]);
+    outputln(m[3], "       ", m[7], "       ", m[11], "       ", m[15]);
+    outputln(" ================================== ");    
+    return m;
+
+}
+
+
+function OVR::GetProjectionMatrixL()
+{
+	return projectionMatrixL;
+}
+
+
+function OVR::GetProjectionMatrixR()
+{
+	return projectionMatrixR;
+}
+
+
+function OVR::GetDistorsionParams()
+{
+	return DistK;
+}
+
+
+function OVR::GetChromaDistorsionParams()
+{
+	return ChromaK;
+}
+
+
+function OVR::GetModelViewMatrixL()
+{
+	return modelViewL;
+}
+
+
+function OVR::GetModelViewMatrixR()
+{
+	return modelViewR;
+}	
+
+
+function OVR::ComputeOculusMatrices()
+{
+	aspectRatio = (Hsize/Vsize)*0.5;
+	outputln("Aspect Ratio: ",aspectRatio);
+	
+	// Compute Vertical FOV.
+	var rSqd = (2 * LensSeparationDistance / HSize)*(2 * LensSeparationDistance / HSize);
+	var dscale =  DistK.x + DistK.y*rSqd + DistK.z*rSqd*rSqd + DistK.w*rSqd*rSqd*rSqd;
+	trace(externdscale);
+	yFov = 2 * atan((externdscale*Vsize/finalScale)/(2 * EyeToScreenDistance));
+	//yFov = 2 * atan((dscale*Vsize/finalScale)/(2 * EyeToScreenDistance));
+	outputln("Vertical FOV: ",yFov);
+	
+	// Shift vertical center.
+	var viewCenter = HSize * 0.25;
+	var eyeProjectionShift = viewCenter - (LensSeparationDistance * 0.5);
+	var projectionCenterOffset = 4 * eyeProjectionShift / HSize;
+	outputln("View Center: ",viewCenter);
+	
+	// Projection Matrix for the "center eye"
+	trace(near,far);
+	projectionMatrixC = GetPerspectiveMatrixRH(yFov, aspectRatio, near, far);
+	
+	var m = vector(16);
+	m = MatrixIdentity_4();
+	m[12] = projectionCenterOffset;
+	projectionMatrixL = MatrixMultiplyMatrix_4(m, projectionMatrixC);
+	
+	m[12] = -projectionCenterOffset;
+	projectionMatrixR = MatrixMultiplyMatrix_4(m, projectionMatrixC);
+	
+	// Transform to world units.
+	halfIPD = IPD / 2.0;
+	m = MatrixIdentity_4();
+	m[12] = halfIPD;
+	modelViewL = m;
+
+	m = MatrixIdentity_4();
+	m[12] = -halfIPD;
+	modelViewR = m;  
+
+	outputln(" modelViewR: ");    
+    outputln(m[0], "       ", m[4], "       ", m[8], "       ", m[12]);    
+    outputln(m[1], "       ", m[5], "       ", m[9], "       ", m[13]);
+    outputln(m[2], "       ", m[6], "       ", m[10], "       ", m[14]);
+    outputln(m[3], "       ", m[7], "       ", m[11], "       ", m[15]);
+    outputln(" ================================== ");    
+}
+
+
+function OVR::ActivateTracker(enable)
+{
+	tracker_active=enable;
+}
+
+
+function OVR::SetTrackerOffset(tracker_off)
+{
+	tracker_offset=tracker_off+eye_rot_offset;
+}
+
+
+function OVR::GetPosition(tracker_pos, tracker_off)
+{
+	if(!tracker_active)
+		return [0,0,0];
+	if(tracker_off!=VOID)
+		tracker_offset = tracker_off+eye_rot_offset;
+	var rotationOculus = GetRotation();	  	
+	var rotFinal = QuaternionToAxisAngle(rotationOculus);
+	var axis = [rotFinal[0], rotFinal[1], rotFinal[2]];	
+	var trV = VectorRotate(rotFinal[3] * RAD_TO_GRAD,axis,tracker_offset,false);
+ 	return tracker_pos -trV;
+}
+
+
+function OVR::RotateCamera(camera,mouseangles)
+{
+	var cam = camera;
+	if(cam==VOID) cam = CameraGetCurrent();
+		
+  	var rotationOculus = GetRotation();	  	
+	var rotFinal = QuaternionToAxisAngle(rotationOculus);
+	cam.SetRotation(-rotFinal[3] * RAD_TO_GRAD, rotFinal[0], rotFinal[1], rotFinal[2]);
+	
+	cam.RotateGlobal(mouseangles[1], 0, 1, 0);
+	cam.RotateLocal(mouseangles[0], 1, 0, 0);
+	
+	//offset from center of head rotation and center of eyes
+	var axis = [rotFinal[0], rotFinal[1], rotFinal[2]];
+
+	var rotVector = VectorRotate(rotFinal[3] * RAD_TO_GRAD,axis,eye_rot_offset,false);	
+	
+	static var prev_transl = rotVector-eye_rot_offset;
+	var transl_offset = prev_transl - (rotVector-eye_rot_offset);
+	prev_transl = rotVector-eye_rot_offset;
+
+	cam.SetPosition(CameraGetPosition()-transl_offset);
+
+}
+
+
+function OVR::drawFbo(currentEye)
+{		
+	SH.Start();	
+	
+	if (currentEye == "left")
+	{	
+		SH.SetParameter("LensCenter",LensCenterL);
+		SH.SetParameter("ScreenCenter",ScreenCenterL);
+	}
+	else
+	{			
+		SH.SetParameter("LensCenter",LensCenterR);
+		SH.SetParameter("ScreenCenter",ScreenCenterR);
+	}
+		
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glcolor(1,1,1);
+	glDisable(GL_LIGHTING);	
+	glEnable(GL_TEXTURE_2D);
+
+	SetActiveTexture(FBO,VR_BILINEAR_FILTER);
+			
+	SH.SetParameter("Texture",0);
+	
+	glMatrixMode (GL_MODELVIEW);
+	glPushMatrix ();
+	glLoadIdentity ();		
+	glMatrixMode (GL_PROJECTION);
+	glPushMatrix ();
+	glLoadIdentity ();
+		
+	if (currentEye == "left")
+	{	//quad between 0 and 0.5
+		glBegin(GL_QUADS);
+			glTexCoord(0,0.0);
+			glVertex(-1,-1,-1);
+			glTexCoord(0.5,0.0);
+			glVertex(0,-1,-1);
+			glTexCoord(0.5,1.0);
+			glVertex(0,1,-1);
+			glTexCoord(0,1.0);
+			glVertex(-1,1,-1);
+		glEnd();
+	}
+	else
+	{	//quad between 0.5 and 1
+		glBegin(GL_QUADS);
+			glTexCoord(0.5,0.0);
+			glVertex(0,-1,-1);
+			glTexCoord(1.0,0.0);
+			glVertex(1,-1,-1);
+			glTexCoord(1.0,1.0);
+			glVertex(1,1,-1);
+			glTexCoord(0.5,1.0);
+			glVertex(0,1,-1);
+		glEnd();
+	}
+
+	glPopMatrix ();
+	glMatrixMode (GL_MODELVIEW);
+	glPopMatrix ();	
+	
+	SH.Stop();	
+}
+
+
+function OVR::OSceneBeginLeft()
+{	
+	FBO.Start();
+	SceneBeginRel(0.0,0,0.5,1.0);		   	
+	glMatrixMode( GL_PROJECTION);
+	glLoadIdentity();
+	glLoadMatrix(projectionMatrixL);
+	glTranslate(LensSeparationDistance/2.0,0,0);
+	glMatrixMode( GL_MODELVIEW);	
+}	
+
+
+function OVR::OSceneBeginRight()
+{
+	FBO.Start();
+	SceneBeginRel(0.5,0,0.5,1.0);
+	glMatrixMode( GL_PROJECTION);
+	glLoadIdentity();
+	glLoadMatrix(projectionMatrixR);
+	glTranslatef(-LensSeparationDistance/2.0,0,0);
+	glMatrixMode( GL_MODELVIEW);	
+}
+
+
+function OVR::OSceneEnd()
+{
+	SceneEnd();
+	FBO.Stop();
+}
+
+
+function OVR::OSceneDraw(){
+	DrawFbo("left");
+	DrawFbo("right");
+}
+
+
+
+//=================================================
+// Utility functions
+//=================================================
+
+var oculus_rotation_active = true; //Rotazione Oculus e traslazione associata (indipendente dal tracker)
+var oculus;
+var Oculus_pos_zero = [0,0,0];
+var curr_tracker_pos = [0,0,0];
+var prev_tracker_pos = [0,0,0];
+var cameraAngle = [0,0,0];
+var scale1 = 0.0751;
+var tracker_active = false;
+var tracker_offset = [0,0,0];
+var camera_rot_matrix = [1,0,0,0,1,0,0,0,1];
+
+
+function matrix4tomatrix3(matrix4)
+{
+	 var mat3 = MatrixIdentity_3();
+	 mat3[0] = matrix4[0];
+	 mat3[1] = matrix4[1];
+	 mat3[2] = matrix4[2];
+	 mat3[3] = matrix4[4];
+	 mat3[4] = matrix4[5];
+	 mat3[5] = matrix4[6];
+	 mat3[6] = matrix4[8];
+	 mat3[7] = matrix4[9];
+	 mat3[8] = matrix4[10];
+	 return mat3;
+}
+
+function CameraMoveTracker()
+{
+	prev_tracker_pos = curr_tracker_pos;
+ 	curr_tracker_pos = Oculus.GetPosition(GetTrackerPos(0));
+ 	var delta_tracker_pos = curr_tracker_pos - prev_tracker_pos;
+ 	
+	delta_tracker_pos = VectorRotate(-cameraangle.y,[0,1,0],delta_tracker_pos,false);
+	
+	CameraSetPosition(CameraGetPosition()+delta_tracker_pos);	
+	//trace(curr_tracker_pos);	
+}
+
+function ResetOculusPos()
+{
+	//reset initial tracker position
+	CameraSetPosition(CameraGetPosition()- curr_tracker_pos + Oculus_pos_zero);
+	Oculus_pos_zero = Oculus.GetPosition(GetTrackerPos(0));
+	curr_tracker_pos = Oculus_pos_zero;
+	prev_tracker_pos = Oculus_pos_zero;
+}
+
+function CameraRotateMouse()
+{	
+	var angle = cameraAngle;
+	var ocu = CameraGetPosition();		
+	
+
+	glTranslate(ocu.x,ocu.y,ocu.z);
+	glRotate(angle.x, 1,0,0);
+	glRotate(angle.y, 0,1,0);
+	glRotate(angle.z, 0,0,1);
+	glTranslate(-ocu.x,-ocu.y,-ocu.z);
+	
+	var camera_M = glGet(GL_MODELVIEW_MATRIX);
+	camera_rot_matrix = matrix4tomatrix3(camera_M);
+	camera_rot_matrix = Matrixinverse_3(camera_rot_matrix);
+}
+
+//=================================================
+// Wrapper functions
+//=================================================
+// 		Oculus_OnInit(nearplane, farplane, t_a, t_o, angle);						// t_a = tracker_active, t_o = tracker_offset, angle = initial cameraangles [rx,ry,rz]
+// 		Oculus_PostCameraManager(mouseangles);										/7 sets the camera orientation with the oculus (optionally combining also code-based camera movements)  
+//		Oculus_PreRender("<render function left>","<render function right>"); 		// if only the first is specified, it is used for both eyes
+//		Oculus_SceneDraw();															// render function
+//
+// 	OTHER UTILITIES:
+//
+//		Oculus_GetCameraAxes();									// Gets the current camera axes after the oculus transformations as a 9-dim vector
+//		Oculus_GetWidth();										// Returns the horizontal resolution of the Oculus Rift window
+//		Oculus_GetHeight();										// Returns the vertical resolution of the Oculus Rift window
+//		Oculus_GetCorrectFBORes()								// Gets the actual resolution of the FBO windows used for Oculus rendering
+//		Oculus_InvertCoords(in01);								// used to map the desktop screen space into the oculus screen space
+//																// see "Selection" or "SWPointer" in marcelloutils.s3d to get an example
+// 
+// Typical Structure:
+//
+// OnInit()	
+// {
+// 		...
+// 		Oculus_OnInit();
+//	    ...
+// }
+// ....
+// function DrawScene()					// or any other name. It may be desirable to define two drawscenes, one for the left and one for the right eye
+// {
+// 		< RENDER THE SCENE >
+// }
+// ....
+// OnFrame()	
+// {
+//		var mouseangles = [0,0];
+//										// If you want to add device-related rotations (mouse, joystick, keyboard etc.) to the Oculus ones, 
+// 		<CAMERA_MANAGER>				// <CAMERA_MANAGER> must return the updated mouseangles [<rotation around y axis>, <rotation around x axis>]
+//										// new CameraMoveMouse functions already return the needed values passing true as the last parameter
+//
+// 		Oculus_PostCameraManager(mouseangles);
+//	    ...
+//		Oculus_PreRender("DrawScene"); 	// or the name selected above
+//		SceneBegin();
+//		Oculus_SceneDraw();
+//		SceneEnd();
+// }
+
+function Oculus_OnInit(nearplane, farplane, t_a, t_o, angle)
+{
+ 	if (t_a != VOID)
+ 		tracker_active = t_a;
+ 	if (t_o != VOID)
+ 		tracker_offset = t_o;
+ 	if (angle != VOID)
+ 		cameraAngle = angle;
+ 		
+ 	Oculus = OVR();
+ 	
+ 	if (nearplane != VOID)
+ 		Oculus.near = nearplane;
+ 	if (farplane != VOID)
+ 		Oculus.far = farplane;
+ 	
+ 	Oculus.Init();
+ 	 	
+	//var magn = Oculus.EnableMagnetometer();
+	//if(!magn) Outputln("Magnetometer correction not activated");
+		
+	Oculus.SetTrackerOffset(tracker_offset);
+	Oculus.ActivateTracker(tracker_active);	
+}
+
+
+function Oculus_PostCameraManager(mouseangles)
+{	
+	if(keypressed("0"))
+	{
+		if(oculus_rotation_active)
+			Oculus.ResetDir();
+		if(tracker_active)
+			ResetOculusPos();		
+	}
+	
+	if (keyPressed("P"))
+		Oculus.EnablePrediction(true);
+	if (keyPressed("O"))
+		Oculus.EnablePrediction(false);
+	
+	if(tracker_active)
+		CameraMoveTracker();
+		
+	if(oculus_rotation_active)
+		Oculus.RotateCamera(,mouseangles);				
+}
+
+
+function Oculus_GetCameraAxes()
+{
+	return camera_rot_matrix;
+}
+
+
+function Oculus_PreRender(drawscenefx_L,drawscenefx_R)
+{	
+	if (drawscenefx_R == VOID)
+		drawscenefx_R = drawscenefx_L;
+		
+	Oculus.OSceneBeginLeft();
+	CameraRotateMouse();	
+	callback(drawscenefx_L);
+	Oculus.OSceneEnd();	
+	
+	Oculus.OSceneBeginRight();
+	CameraRotateMouse();	
+	callback(drawscenefx_R);
+	Oculus.OSceneEnd();	
+}
+
+function Oculus_PreRenderLeft(drawscenefx_L)
+{				
+	Oculus.OSceneBeginLeft();
+	CameraRotateMouse();	
+	callback(drawscenefx_L);
+	Oculus.OSceneEnd();			
+}
+
+function Oculus_PreRenderRight(drawscenefx_R)
+{				
+	Oculus.OSceneBeginRight();
+	CameraRotateMouse();	
+	callback(drawscenefx_R);
+	Oculus.OSceneEnd();			
+}
+
+function Oculus_SceneDraw()
+{
+	Oculus.OSceneDraw();
+}
+
+
+function Oculus_InvertCoords(in01)
+{
+	return Oculus.invert(in01);
+}
+
+function Oculus_GetHeight()
+{
+	return Oculus.Vres;
+}
+
+function Oculus_GetWidth()
+{
+	return Oculus.Hres;
+}
+
+function Oculus_GetCorrectFBORes()
+{
+	return Oculus.correctFBOres;
+}

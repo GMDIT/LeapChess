@@ -1,9 +1,9 @@
+#ifndef _MARCELLOUTILS
+#define _MARCELLOUTILS
 // Collection of utilities for XVR
 // Written by SSSA
 // (C) 2013-2014
 // Contact: m.carrozzino@sssup.it, g.avveduto@sssup.it, f.tecchia@sssup.it
-
-#ifdef __COMPILEMARCELLOUTILS
 
 #define SEL_PASS 0
 #define SEL_PICK 1
@@ -22,15 +22,15 @@ function KeyStatus(keycode)
 	{
 		keycode = asc(keycode);
 	}
-		
+
 	static var keys_stati = vector(255);
 	if (KeyPressed(keycode))
-	{	
+	{
 		if (keys_stati[keycode] == 0.0)
 		{
 			keys_stati[keycode] = 1.0;
 			return true;
-			
+
 		}
 	}
 	else
@@ -38,7 +38,7 @@ function KeyStatus(keycode)
 		keys_stati[keycode] = 0.0;
 		return false;
 	}
-	return false;		
+	return false;
 }
 
 //----------------------------------------------------------------------
@@ -55,10 +55,10 @@ class DebugBox
 	var updirection;
 	var xsize;
 	var margin_left;
-	var margin_bottom;	
+	var margin_bottom;
 	var color;
 	var fill_color;
-	
+
 	Initialize();
 	SetItem(t,v);
 	SetPosition(x,y);
@@ -106,7 +106,7 @@ function DebugBox::SetPosition(x,y)
 }
 
 function DebugBox::SetItem(testo,value)
-{	
+{
 	var testo_item = sprintf("%s: %.3f", testo, value);
 	Aadd(items_array, testo_item);
 	var lun = len(testo_item);
@@ -116,49 +116,49 @@ function DebugBox::SetItem(testo,value)
 
 function DebugBox::Draw(viewportx, viewporty)
 {
-	
+
 	ConsoleFont(font,fontsize);
-	
+
 	var vspace;
 	if (viewporty == -1)
 		vspace = linespacing * 0.02;
 	else
-	{	
+	{
 		vspace = linespacing * fontsize / viewporty;
 	}
 	var i,j;
-		
+
 	var startbox_x = startx-margin_left/viewportx;
-	var startbox_y = vspace*last_item + starty;	
+	var startbox_y = vspace*last_item + starty;
 	var dim_x = 0.75*(xsize*fontsize)/viewportx;
 	var dim_y = startbox_y-starty+margin_bottom/viewporty ;
-	
+
 	ConsoleColor(fill_color[0],fill_color[1],fill_color[2],fill_color[3]);
 	ConsoleFilledRect(startbox_x,startbox_y, dim_x , dim_y);
 	ConsoleColor(color[0],color[1],color[2],color[3]);
 	ConsoleRect(startbox_x,startbox_y, dim_x , dim_y);
-	
+
 	for (i=0;i<last_item;i++)
 	{
 		if (!updirection)
 			j = last_item - i - 1;
-		else 
+		else
 			j = i;
-			
-		ConsoleText(startx,starty+vspace*i,items_array[j]);	
+
+		ConsoleText(startx,starty+vspace*i,items_array[j]);
 	}
-	
+
 	items_array = array(0);
 	last_item = 0;
 }
 
 
-
+/*
 //-------------------------------------------
 function Selection(vr_obj, mode, compID, OculusOn)
 //-------------------------------------------
 {
-	var retval= false;	
+	var retval= false;
 	var viewport = array(4);
 	var winx,winy;
 
@@ -173,14 +173,14 @@ function Selection(vr_obj, mode, compID, OculusOn)
 	winx = Mouse.X;						//x*1.0f/width;
 	winy = viewport[3] - 1 - Mouse.Y;	//1.0f - y*1.0f/height;
 
-	   	
+
 	var vec0 = [0.0,0.0,0.0];
 	var vec1 = [0.0,0.0,0.0];
-		
+
 	if (OculusOn)
 	{
-		var inv = Oculus_InvertCoords([Mouse.X,Mouse.Y]);	
-		var fbores = Oculus_GetCorrectFBORes();		
+		var inv = Oculus_InvertCoords([Mouse.X,Mouse.Y]);
+		var fbores = Oculus_GetCorrectFBORes();
 		vec0[0] = inv.x*fbores.x;
  		vec0[1] = inv.y*fbores.y;
  		vec0[2] = 0.0;
@@ -197,10 +197,10 @@ function Selection(vr_obj, mode, compID, OculusOn)
 		vec1[1] = winy ;
 		vec1[2] = 1.0;
 	}
-	
+
 	p0 = gluUnProject(vec0);
 	p1 = gluUnProject(vec1);
-	
+
 	/*
 	if (OculusOn)
 	{
@@ -214,54 +214,54 @@ function Selection(vr_obj, mode, compID, OculusOn)
 		glEnd();
 		glENable(GL_LIGHTING);
 		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_BLEND);	
+		glEnable(GL_BLEND);
 	}
-	*/
-	
+	/
+
 	if ( vr_obj.IsColliding(p0, p1,pInt,nrml,n_tr,&compID) )
 		retval = true;
 	else
 		retval = false;
-	
+
 	if ((mode == SEL_PICK || mode == SEL_MOVE) && !Mouse.ButtonL)
 		retval = false;
 
-				
+
 	if (retval && mode == SEL_MOVE)
-	{	
-		p0 = gluProject(pInt);		//	p0:   punto di intersezione in screen coordinates		
-		vec0[2] = p0[2];			//  vec0: mouse pointer in screen coordinates con z = quella di p0	
-		p0 = gluUnProject(vec0);	//  p0:	  vec0 in world coordinates	
+	{
+		p0 = gluProject(pInt);		//	p0:   punto di intersezione in screen coordinates
+		vec0[2] = p0[2];			//  vec0: mouse pointer in screen coordinates con z = quella di p0
+		p0 = gluUnProject(vec0);	//  p0:	  vec0 in world coordinates
 		trace(p0);
-		
+
 		vr_obj.SetPosition(p0);
 	}
-	
+
 	return retval;
-	
+
 }
 
 function SelectionOculus(vr_obj, mode, compID)
 {
 	return Selection(vr_obj, mode, compID, true);
 }
-
+*/
 //-------------------------------------------
 function MoveCameraTo(dest)
 //-------------------------------------------
-{	
+{
 	var temp;
 	var dist;
-	var speed=CAMERA_SPEED;	
-	temp = CameraGetPosition();	
+	var speed=CAMERA_SPEED;
+	temp = CameraGetPosition();
 	temp = speed * temp + (1.0-speed) * dest;
-	CameraSetPosition(temp);	
-	
+	CameraSetPosition(temp);
+
 	dist = ((temp[0]-dest[0])^2)+((temp[1]-dest[1])^2)+((temp[2]-dest[2])^2);
-	
-	if (dist < CAMERA_DIST) 
+
+	if (dist < CAMERA_DIST)
 	{
-		return true;		
+		return true;
 	}
 	else return false;
 }
@@ -270,20 +270,20 @@ function MoveCameraTo(dest)
 //-------------------------------------------
 function MoveCameraTarget(dest)
 //-------------------------------------------
-{	
+{
 	var temp;
 	var dist;
-	var speed=CAMERA_SPEED;	
-	temp = CameraGetTarget();	
+	var speed=CAMERA_SPEED;
+	temp = CameraGetTarget();
 	temp = speed*temp+(1.0-speed)*dest;
-	var temp2=temp;	
+	var temp2=temp;
 	CameraSetTarget(temp);
-	
+
 	dist = ((temp[0]-dest[0])^2)+((temp[1]-dest[1])^2)+((temp[2]-dest[2])^2);
-	
-	if (dist < CAMERA_DIST) 
+
+	if (dist < CAMERA_DIST)
 	{
-		return true;		
+		return true;
 	}
 	else return false;
 }
@@ -292,7 +292,7 @@ function MoveCameraTarget(dest)
 //-------------------------------------------
 function MoveCameraAndTarget(cdest,tdest,frames)
 //-------------------------------------------
-{	
+{
 	var temp;
 	static var cdist,tdist;
 	static var start = true;
@@ -303,24 +303,24 @@ function MoveCameraAndTarget(cdest,tdest,frames)
 	{
 		nframes = 0;
 		var sqdi;
-		
-		temp = CameraGetPosition();			
-		sqdi = ((temp[0]-cdest[0])^2)+((temp[1]-cdest[1])^2)+((temp[2]-cdest[2])^2);			
-		cdist = sqrt(sqdi);				
+
+		temp = CameraGetPosition();
+		sqdi = ((temp[0]-cdest[0])^2)+((temp[1]-cdest[1])^2)+((temp[2]-cdest[2])^2);
+		cdist = sqrt(sqdi);
 		cdir = norm(cdest-temp);
-		cvm = cdist/frames;				
-				
+		cvm = cdist/frames;
+
 		temp = CameraGetTarget();
-		sqdi = ((temp[0]-tdest[0])^2)+((temp[1]-tdest[1])^2)+((temp[2]-tdest[2])^2);		
+		sqdi = ((temp[0]-tdest[0])^2)+((temp[1]-tdest[1])^2)+((temp[2]-tdest[2])^2);
 		tdist = sqrt(sqdi);
 		tdir = norm(tdest-temp);
-		tvm = tdist/frames;				
-		
+		tvm = tdist/frames;
+
 	}
-		
-	var cspeed, tspeed;	
+
+	var cspeed, tspeed;
 	var coeff = (frames+1)/2;
-	
+
 	if (nframes < frames/2)
 	{
 		cspeed = nframes*cvm/coeff;
@@ -328,25 +328,25 @@ function MoveCameraAndTarget(cdest,tdest,frames)
 	}
 	else
 	{
-		cspeed = (frames-nframes)*cvm/coeff;	
-		tspeed = (frames-nframes)*tvm/coeff;	
+		cspeed = (frames-nframes)*cvm/coeff;
+		tspeed = (frames-nframes)*tvm/coeff;
 	}
-	
+
 	var cv = (2*cspeed);
 	var tv = (2*tspeed);
-	
+
 	temp=CameraGetPosition();
 	temp=temp + cv * cdir;
 	CameraSetPosition(temp);
-		
+
 	temp=CameraGetTarget();
 	temp=temp + tv * tdir;
 	CameraSetTarget(temp);
-	
+
 
 	nframes ++;
 	if (nframes == frames || cdist == 0)
-	{			
+	{
 		start = true;
 	}
 	else
@@ -368,7 +368,7 @@ class ProgressBar
 	var a_splash_textures;
 	var n_textures;
 	var cur_index;
-	var bkg_color;	
+	var bkg_color;
 	var fgd_color;
 	var m_bar_top;
 	var m_bar_bottom;
@@ -379,7 +379,7 @@ class ProgressBar
 	var m_pic_sizex;
 	var m_pic_sizey;
 
-		
+
 	SetProgress(prf);
 	InitTextures(tex_array);
 	SetText(txt);
@@ -405,7 +405,7 @@ function ProgressBar::ProgressBar()
 	m_pic_left		= -0.3;
 	m_pic_sizex		=  0.6;
 	m_pic_sizey		=  0.6;
-	
+
 }
 
 function ProgressBar::InitTextures(tex_array)
@@ -440,27 +440,27 @@ function ProgressBar::Draw(pr, txt, ind)
 	if ( valtype(pr) !="" ) progress  = pr;
 	if ( valtype(txt)!="" ) s_text    = txt;
 	if ( valtype(ind)!="" ) cur_index = ind;
-		
+
 	var p = progress/100.0;
-	
+
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	
+
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-			
+
 	glClearColor(0.0,0.0,0.0,1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
-	
+
 	glDisable(GL_LIGHTING);
-		
+
 	if(cur_index != -1 && n_textures > 0)
-	{		
+	{
 		SetActiveTexture(a_splash_textures[cur_index]);
 		glEnable(GL_TEXTURE_2D);
-		glBegin(GL_QUADS);	
+		glBegin(GL_QUADS);
 			glColor(1.0,1.0,1.0);//	++ -+ -- +-
 			glTexcoord(1,0);
 			glVertex( m_pic_left+m_pic_sizex,  m_pic_top, 0);
@@ -473,9 +473,9 @@ function ProgressBar::Draw(pr, txt, ind)
 		glEnd();
 		glDisable(GL_TEXTURE_2D);
 	}
-	
+
 	glTranslate(0,-0.53,0);
-										
+
 	if (progress>=0)
 	{
 		//Barra
@@ -489,28 +489,28 @@ function ProgressBar::Draw(pr, txt, ind)
 			glEnd();
 		}
 		else
-		{		
-			glColor(1.0-p*0.4,p,0.0,1.0); 				
+		{
+			glColor(1.0-p*0.4,p,0.0,1.0);
 			glBegin(GL_QUADS);		//Barra cangiante
 				glVertex(m_bar_left, 	  m_bar_bottom, 0.0);
 				glVertex(m_bar_left+p,  m_bar_bottom, 0.0);
 				glVertex(m_bar_left+p,  m_bar_top, 0.0);
 				glVertex(m_bar_left, 	  m_bar_top, 0.0);
 			glEnd();
-		}		
+		}
 	}
-	
+
 	glEnable(GL_LIGHTING);
-	
+
 	glPopMatrix();
 	glLoadIdentity();
-	
+
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
-	
+
 	glMatrixMode(GL_MODELVIEW);
-		
-	ConsoleText(0.249, 0.2, s_text);	
+
+	ConsoleText(0.249, 0.2, s_text);
 	SwapBuffers();
 }
 
@@ -523,26 +523,26 @@ function ToolTip(s_text, reverse, bkg_color, fgd_color)
 	var mx = 0.0;
 	var my = 0.0;
 	var viewport = glget(GL_VIEWPORT);
-	
+
 	if ( valtype(reverse)=="" )
-		reverse = false;	
-	
+		reverse = false;
+
 	if ( valtype(bkg_color)=="" )
 		bkg_color = [1.0,1.0,0.0,0.5];
-	
+
 	if ( valtype(fgd_color)=="" )
-		fgd_color = [0.0,0.0,0.0,1.0];	
-	
+		fgd_color = [0.0,0.0,0.0,1.0];
+
 	glColor(1.0,1.0,1.0,0.1);
-		
-	var dim = 0.01+0.006*len(s_text);		
-	
+
+	var dim = 0.01+0.006*len(s_text);
+
 	mx = (Mouse.x/Viewport[2]);
 	if (reverse)
 		mx = mx-dim;
-			
+
 	my = (Mouse.y/Viewport[3]);
-	
+
 	var fontsize = 12;
 	var ydim = (fontsize+4)/Viewport[3];
 	ConsoleFont("Arial",fontsize);
@@ -550,7 +550,7 @@ function ToolTip(s_text, reverse, bkg_color, fgd_color)
 	ConsoleFilledRect(mx,1.05-my-ydim, dim, ydim );
 	var margin = 8/Viewport[3];
 	ConsoleColor( fgd_color[0], fgd_color[1], fgd_color[2], fgd_color[3]);
-	ConsoleText(mx+0.01,1.015-my+margin,s_text);	
+	ConsoleText(mx+0.01,1.015-my+margin,s_text);
 }
 
 //-------------------------------------------
@@ -570,30 +570,30 @@ function qsort (vettore, prim, ult, indices)
 {
 	var last,v,i;
 	var vind = indices;
-	
+
 	if (prim >= ult)
 		return vettore;
-		
-	var ind =  (prim+ult)/2;	
+
+	var ind =  (prim+ult)/2;
 	v = swap (vettore, prim, ind);
 	vind = swap (vind, prim, ind);
 	last = prim;
-	
-	for (i=prim+1;i<=ult;i++) 	
+
+	for (i=prim+1;i<=ult;i++)
 		if (v[i] < v[prim])
 		{
 			last++;
 			v = swap (v, last, i);
-			vind = swap (vind, last,i);			
+			vind = swap (vind, last,i);
 		}
-	
+
 	v = swap (v,prim,last);
 	indices = swap (vind, prim, last);
-	
+
 	v =	qsort (v,prim,last-1,indices);
 	v =	qsort (v,last+1,ult,indices);
-	
-	return v;			
+
+	return v;
 }
 
 //-------------------------------------------
@@ -604,7 +604,7 @@ class SWPointer
 	var size;
 	var distance;
 	var color;
-	
+
 	init(image,sz,dist);
 	setcolor(col);
 	draw(x,y,on);
@@ -621,14 +621,14 @@ function SWPointer::init(image,sz,dist)
 	}
 	else
 		size = sz;
-		
+
 	if (dist == VOID)
 	{
 		distance = 0.994;
 	}
 	else
 		distance = dist;
-	
+
 	b_pointer = CVmBillBoard(image,size.x,size.y);
 	color = [1, 0.5, 0.5];
 }
@@ -645,10 +645,11 @@ function SWPointer::Draw(x,y,oculusOn)
 	ShowCursor(false);
 	var viewport = Glget(GL_VIEWPORT);
 	var pwin = vector(3);
-	
+
+	/*
 	if (OculusOn)
 	{
-		var inv = Oculus_InvertCoords([x,y]);	
+		var inv = Oculus_InvertCoords([x,y]);
 		var fbores = Oculus_GetCorrectFBORes();
 		pwin[0] = inv.x*fbores.x;
  		pwin[1] = inv.y*fbores.y;
@@ -656,21 +657,20 @@ function SWPointer::Draw(x,y,oculusOn)
  		b_pointer.SetSize(0.05*size.x,0.05*size.y);
  	}
  	else
+	*/
  	{
  		pwin = [Mouse.x,viewport[3]-Mouse.y,distance];
  		b_pointer.SetSize(size.x,size.y);
  	}
- 	
-	
-	var point=gluUnproject(pwin);			
+
+
+	var point=gluUnproject(pwin);
 	glEnable(GL_BLEND);
 	glColor([color.r, color.g, color.b,1]);
-	glDisable(GL_DEPTH_TEST);		
-	b_pointer.SetPosition(point);		
+	glDisable(GL_DEPTH_TEST);
+	b_pointer.SetPosition(point);
 	b_pointer.Draw(VR_CLAMP);
-	glEnable(GL_DEPTH_TEST);	
+	glEnable(GL_DEPTH_TEST);
 }
-
-
 
 #endif
