@@ -133,6 +133,7 @@ var shader_name = "adows.sh";
 /*  Function declarations    */
 function CameraMoveMouse();
 function DrawGrid(col, size);
+function MouseGaze();
 
 function DrawGroundLine(size, pos, color, centered);
 function DrawHighlightSquares();
@@ -274,6 +275,7 @@ function OnInit(params)
 	CameraSetTarget(camTar_StartScreen);
 
 	cm = Cameraman();
+	CameraFree();
 
 	LoadSkyboxTextures();
 
@@ -782,6 +784,33 @@ function Draw_EndScreen()
 	SceneEnd();
 	*/
 }
+
+var rotX = 0, rotY = 0,prevRotX = 0, prevRotY = 0;
+function MouseGaze()
+{
+	static var inMouseR = false, inMouseL = false;
+	static var precX = Mouse.X, precY = Mouse.Y;
+
+	prevRotX = rotX;
+	prevRotY = rotY;
+	rotX = (Mouse.X - precX)/2.0;
+	rotY = (Mouse.Y - precY)/2.0;
+	CameraRotate(rotY, 1, 0, 0);
+	CameraRotate(rotX, 0, 1, 0);
+	//CameraSetPosition(vectorRotate(rotY, 1, 0, 0,CameraGetPosition()));
+	//CameraSetPosition(vectorRotate(rotX, 0, 1, 0,CameraGetPosition()));
+
+	var dirCam = CameraGetDirection();
+
+	if ((dirCam[1]<-0.98)||(dirCam[1]>0.98))
+	{
+		rotX = prevRotX;
+		rotY = prevRotY;
+	}
+
+	precX = Mouse.X;
+	precY = Mouse.Y;
+}
 function OnFrame()
 {
 	//OutputLN(CameraGetPosition());
@@ -789,6 +818,7 @@ function OnFrame()
 	//Light0.SetPosition(CameraGetPosition());	// Sposto la luce ogni volta nella posizione corrente della camera
 
 	cm.Update();
+	MouseGaze();
 	switch(scene)
 	{
 		case S_STARTSCREEN:
