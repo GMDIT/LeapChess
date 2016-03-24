@@ -170,9 +170,9 @@ function OnDownload()
 function OnInit(params)
 {
 	//FOR OCULUS
-	SceneSetParam(VR_HEADTRACKER,2);
-   SceneSetParam(VR_TRACKER_POSITION,0.0,0,2.0);
-   SceneSetParam(VR_SCREEN_SIZE,2.2,1.65);
+	//SceneSetParam(VR_HEADTRACKER,2);
+   //SceneSetParam(VR_TRACKER_POSITION,0.0,0,2.0);
+   //SceneSetParam(VR_SCREEN_SIZE,2.2,1.65);
 	//////////////////////////
 
 	SetFrameRate(60);
@@ -903,66 +903,67 @@ function OnFrame()
     SceneBeginRel( 0.5,0.0 , 0.5,1.0 ,VR_STEREO_RIGHT);
 	//RenderSkybox();
 
-	if(scene == S_GAMEPLAY)
-	{
-		if(mov_moving)
-			DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
-			else
-			DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
-
-		palm.Draw();
-	}
-
-	FillTextureMatrix();
-	//glCullFace(GL_FRONT);
-	glMatrixMode(GL_MODELVIEW);
-	//glCullFace(GL_BACK);
-
-	shader.Start();
-
-		SetActiveTexture(fbo);
-		shader.SetParameter("shadowMap", 0);
-
-		if(scene != S_STARTSCREEN)
+		if(scene == S_GAMEPLAY)
 		{
-			cb.DrawPieces();
+			if(mov_moving)
+				DrawGroundLine(cb.GetPieceFrom32id(mov_piece).myDim, cb.GetPiecePosition(mov_piece), [0.7, 0.9, 0.7], true);
+				else
+				DrawGroundLine(1, f0.GetPosition(), [0.1, 0.1, 0.9], false);
 
-			if(scene == S_GAMEPLAY)
-				f0.Draw();
-		}
-		else if(scene == S_STARTSCREEN)
-		{
-			cb.wPieces[7].Draw();
-			cb.bPieces[7].Draw();
+			palm.Draw();
 		}
 
-		//if(scene == S_STARTSCREEN)
-			g_title.Draw();
+		FillTextureMatrix();
+		//glCullFace(GL_FRONT);
+		glMatrixMode(GL_MODELVIEW);
+		//glCullFace(GL_BACK);
 
-		f1.Draw();
+		shader.Start();
 
-		o_table.Draw();
-		o_chessboard.Draw();
+			SetActiveTexture(fbo);
+			shader.SetParameter("shadowMap", 0);
+
+			if(scene != S_STARTSCREEN)
+			{
+				cb.DrawPieces();
+
+				if(scene == S_GAMEPLAY)
+					f0.Draw();
+			}
+			else if(scene == S_STARTSCREEN)
+			{
+				cb.wPieces[7].Draw();
+				cb.bPieces[7].Draw();
+			}
+
+			//if(scene == S_STARTSCREEN)
+				g_title.Draw();
+
+			f1.Draw();
+
+			o_table.Draw();
+			o_chessboard.Draw();
 
 
-		if(scene == S_ENDSCREEN)
-		{
-			if(cb.turn == CP_W)
-				g_bwin.Draw();
-			else
-				g_wwin.Draw();
+			if(scene == S_ENDSCREEN)
+			{
+				if(cb.turn == CP_W)
+					g_bwin.Draw();
+				else
+					g_wwin.Draw();
 
-			g_win.Draw();
-			g_newgame.Draw();
-			g_exit.Draw();
-		}
+				g_win.Draw();
+				g_newgame.Draw();
+				g_exit.Draw();
+			}
 
-	shader.Stop();
+		shader.Stop();
 
-	//Draw transparent objs
-	if(hlList != null)
-		DrawHighlightSquares();
-		SceneEnd();
+		//Draw transparent objs
+		if(hlList != null)
+			DrawHighlightSquares();
+
+	SceneEnd();
 
 	return;
 
