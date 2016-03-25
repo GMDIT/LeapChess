@@ -805,11 +805,16 @@ function OnTimer()
 {
 	//TODO: se non ricevo per tot volte, disabilita dita
 	//receive packet
-	lm.UpdatePos(&palm_pos, &f0_pos, &f1_pos);
+	lm.Update(&palm_pos, &f0_pos, &f1_pos);
 
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
+
+	var g;
+	if(lm.GetGesture(&g))
+		OutputLN("GESTURE ", g, " (", lm.dataValues[0], ")");
+
 	/*
 	if(NetDataReady(lm_channel))
 	{

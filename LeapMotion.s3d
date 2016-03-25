@@ -16,9 +16,15 @@ class LeapMotion
     var reduction_factor;
     var dataValues;
 
+    var newGesture;
+    var oldGesture;
+    var gesture;
+    var gesturePresence;
+
     Connect();
-    UpdatePos(palm_pos, f0_pos, f1_pos);
+    Update(palm_pos, f0_pos, f1_pos);
     ChangeSide(newSide);
+    GetGesture(g);
 };
 
 function LeapMotion::LeapMotion(p, s)
@@ -27,7 +33,11 @@ function LeapMotion::LeapMotion(p, s)
     side = s;
     reduction_factor = 10;
     dataValues = {"0",0,0,0, 0,0,0 ,0,0,0};
-    //		handID, palmX, palmY, palmZ, f0X, ... f1X...
+    //		gesture, palmX, palmY, palmZ, f0X, ... f1X...
+
+    newGesture = "";
+    oldGesture = "";
+    gesturePresence = false;
 }
 
 function LeapMotion::Connect()
@@ -53,7 +63,7 @@ function LeapMotion::Connect()
     return false;
 }
 
-function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
+function LeapMotion::Update(palm_pos, f0_pos, f1_pos)
 {
     if(NetDataReady(channel))
 	{
@@ -61,6 +71,14 @@ function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
 		var recIp = "";
 		data = NetReceiveFrom(channel, &recIP);
 		Sscanf(data,"%s (%f, %f, %f)(%f, %f, %f)(%f, %f, %f)", &dataValues[0], &dataValues[1],&dataValues[2],&dataValues[3],&dataValues[4],&dataValues[5],&dataValues[6], &dataValues[7],&dataValues[8],&dataValues[9] );
+
+        newGesture = dataValues[0];
+        if(newGesture != oldGesture)
+        {
+            gesture = newGesture[0];
+            gesturePresence = true;
+        }
+        oldGesture = newGesture;
 
         switch(side)
         {
@@ -96,6 +114,18 @@ function LeapMotion::UpdatePos(palm_pos, f0_pos, f1_pos)
 function LeapMotion::ChangeSide(newSide)
 {
     side = newSide;
+}
+
+function LeapMotion::GetGesture(g)
+{
+    if(gesturePresence)
+    {
+        g = gesture;
+        gesturePresence = false;
+        return true;
+    }
+    else
+        return false;
 }
 
 #endif
