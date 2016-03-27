@@ -8,6 +8,7 @@ class LogBox
     var latest, size;
 
     Add(m);
+    Del();
     Clear();
     Draw();
 };
@@ -21,9 +22,18 @@ function LogBox::LogBox(s)
 
 function LogBox::Add(m)
 {
+    var prev = latest == 0 ? size - 1 : latest - 1;
+    if(messages[prev] == m)
+        return; //TODO: only for CHECK message. Fix on ChessBoard?
+
     messages[latest] = m;
     OutputLN(messages[latest]);
     latest = (latest + 1) % size;
+}
+
+function LogBox::Del()
+{
+    latest = latest == 0 ? size - 1 : latest - 1;
 }
 
 function LogBox::Clear()
@@ -40,7 +50,6 @@ function LogBox::Draw()
 {
     var curr = latest - 1;
     if(curr == -1) curr = size - 1;
-    OutputLN("CURR ", curr);
     var tot = 0;
 
     ConsoleColor( 1, 1, 1, 1 ) ;

@@ -247,9 +247,10 @@ function OnInit(params)
 	o_table.Normalize(50);
 	o_table.SetPosition([0,-20,0]);
 
+	logMessages = LogBox(9);
+	logMessages.Add("Select your side");
 
-
-	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack());
+	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack(), logMessages);
 	cb.Init();
 
 	CameraActivate(LIGHT_CAMERA);
@@ -321,8 +322,6 @@ function OnInit(params)
   	g_exit.SetPosition(g_exit_pos);
 	g_exit.Rotate(90, 1, 0, 0); //TODO: rotate the model!
 
-	logMessages = LogBox(5);
-	logMessages.Add("Select your color");
 }
 
 var touchTimer = 0;
