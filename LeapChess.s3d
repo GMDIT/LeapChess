@@ -10,6 +10,7 @@
 #include "LeapMotion.s3d"
 #include "MarcelloUtils.s3d"
 #include "Cameraman.s3d"
+#include "LogBox.s3d"
 
 
 /* Set global scene parameters */
@@ -47,7 +48,7 @@ var g_newgame_pos = [-2, 7, 0];
 var b_exit, m_exit, g_exit;
 var g_exit_pos = [-2, 1, 0];
 
-
+var logMessages;
 /*ChessEngine server data */
 //var ce_channel;
 var ce_data;
@@ -89,7 +90,6 @@ var mov_touching = false;
 var mov_moving = false;
 var mov_offset;
 var mov_piece = -1;
-
 
 var cmdSent = false;
 
@@ -320,6 +320,9 @@ function OnInit(params)
 	g_exit.Normalize(6);
   	g_exit.SetPosition(g_exit_pos);
 	g_exit.Rotate(90, 1, 0, 0); //TODO: rotate the model!
+
+	logMessages = LogBox(5);
+	logMessages.Add("Select your color");
 }
 
 var touchTimer = 0;
@@ -360,6 +363,9 @@ function ResetGlobals()
 	touchTimer = 0;
 	fingerEnabled = false;
 	timerResponse = 0;
+
+	logMessages.Clear();
+	logMessages.Add("Select your color");
 }
 
 
@@ -423,6 +429,9 @@ function Update_Startscreen()
 		//MoveCameraAndTarget(CamPos, CamTarget, 240);
 		scene = S_GAMEPLAY;
 
+		logMessages.Clear();
+		logMessages.Add("Game started");
+
 		if(playerColor == CP_W)
 		{
 			g_win.Rotate(90, 0, 0, 1);
@@ -430,6 +439,8 @@ function Update_Startscreen()
 			g_bwin.Rotate(90, 0, 0, 1);
 			g_newgame.Rotate(90, 0, 0, 1);
 			g_exit.Rotate(90, 0, 0, 1);
+
+			logMessages.Add("Waiting for player move...");
 		}
 		else
 		{
@@ -438,7 +449,11 @@ function Update_Startscreen()
 			g_bwin.Rotate(-90, 0, 0, 1);
 			g_newgame.Rotate(-90, 0, 0, 1);
 			g_exit.Rotate(-90, 0, 0, 1);
+
+			logMessages.Add("Waiting for computer move...");
 		}
+
+
 	}
 
 }
@@ -654,7 +669,18 @@ function Draw_Gameplay()
 		if(hlList != null)
 			DrawHighlightSquares();
 
+		logMessages.Draw();
+		/*
+			ConsoleColor( 1, 1, 1, 1 ) ;
+			//ConsoleRect(0.01, 0.01, 0.99, 0.99);
+			ConsoleFont("Arial",20);
+			ConsoleText(0.40,0.01,"Select you color.");
+			//ConsoleText(0.9,0.01,"Health");
+			ConsoleFont("Arial",14);
+		*/
 	SceneEnd();
+
+
 }
 
 function Update_Endscreen()

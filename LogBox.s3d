@@ -1,0 +1,56 @@
+#ifndef _LOGBOX
+#define _LOGBOX
+
+class LogBox
+{
+    var position;
+    var messages;
+    var latest, size;
+
+    Add(m);
+    Clear();
+    Draw();
+};
+
+function LogBox::LogBox(s)
+{
+    size = s;
+    messages = Array(size);
+    latest = 0;
+}
+
+function LogBox::Add(m)
+{
+    messages[latest] = m;
+    OutputLN(messages[latest]);
+    latest = (latest + 1) % size;
+}
+
+function LogBox::Clear()
+{
+    for(var i = 0; i < size; i++)
+    {
+        messages[i] = Void;
+    }
+
+    latest = 0;
+}
+
+function LogBox::Draw()
+{
+    var curr = latest - 1;
+    if(curr == -1) curr = size - 1;
+    OutputLN("CURR ", curr);
+    var tot = 0;
+
+    ConsoleColor( 1, 1, 1, 1 ) ;
+    //ConsoleRect(0.01, 0.01, 0.99, 0.99);
+    ConsoleFont("Arial",15);
+    while(messages[curr] != Void && tot < size)
+    {
+        ConsoleText(0.01, 0.03 * tot + 0.01, messages[curr]);
+        tot++;
+        curr = curr == 0 ? size - 1 : curr - 1;
+    }
+}
+#endif
