@@ -844,7 +844,7 @@ function OnTimer()
 	{
 		logMessages.Add("Undoing latest 2 moves...");
 
-		hlList = null
+		hlList = null;
 		if(cb.Undo())
 		{
 			logMessages.Del();
@@ -855,7 +855,7 @@ function OnTimer()
 			logMessages.Del();
 			logMessages.Add("Undoing latest 2 moves... impossible to make undo");
 		}
-		logMessages.Add("Waiting for playrt move...");
+		logMessages.Add("Waiting for player move...");
 	}
 
 	/*

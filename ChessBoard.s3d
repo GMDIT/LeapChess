@@ -1030,10 +1030,10 @@ function ChessBoard::Undo() //TODO: what if not enough history? (Only in case of
         undoListHead = (undoListHead + undoListSize - 1) % undoListSize;
     }
 
-    if(move == 2)
+    if(moves >= 2)
         return true;
     else
-        false;
+        return false;
 }
 
 #endif
