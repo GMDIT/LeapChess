@@ -42,6 +42,8 @@ class ChessBoard
     var anim;
     var lb;
 
+    var undoList, undoListSize, undoListHead;
+
     Init();
     PrintMoveString(turn, type, oldPos, newPos);
     DrawPieces(flag);
@@ -77,6 +79,9 @@ class ChessBoard
     IsCheckMate(color);
     CastlingStatus();
     Castle(king, oldPos);
+
+    AddForUndo(m);
+    Undo();
 };
 
 function ChessBoard::ChessBoard(c, d, wm, bm, llbb)
@@ -127,6 +132,10 @@ function ChessBoard::Init()
     cbMatrix = Array(64);
     isDropping = false;
     latestMove = null;
+
+    undoListSize = 10;
+    undoList = Array(undoListSize);
+    undoListHead = 0;
 
     wPieces[0] = ChessPiece(CP_TOWER, AHto64("A", 1), CP_W, wMaterial);
 	wPieces[1] = ChessPiece(CP_TOWER, AHto64("H", 1), CP_W, wMaterial);
@@ -349,10 +358,14 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
             OutputLN(latestMove);
             SetEnPassant(p, oldPos, newPos);
 
+            var cr = false;
             if(p.type == CP_KING)
-                Castle(p, oldPos);
+                cr = Castle(p, oldPos);
 
             latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos), p};
+
+            if(!cr)
+                AddForUndo({p, "R", oldPos});
 
             lb.Del();
             PrintMoveString(turn, p.type, oldPos, newPos);
@@ -377,6 +390,9 @@ function ChessBoard::EatPieceIn(pos)
         return;
 
     OutputLN("Eating piece, enPassant:", enPassant != Void);
+
+    AddForUndo({p, "E", p.position});
+
     var c = p.color;
     var e = eatedCounters[c];
 
@@ -749,6 +765,7 @@ function ChessBoard::MakeMovetextMove(movetext)
     var endPos = AHto64(movetext[2], val(movetext[3]));
     highlightSquares[startPos] = 1;
     highlightSquares[endPos] = 1;
+    AddForUndo({cbMatrix[startPos], "R", startPos});
     MovePieceToPos(cbMatrix[startPos], endPos, true);
     return highlightSquares;
 }
@@ -957,19 +974,66 @@ function ChessBoard::CastlingStatus()
 function ChessBoard::Castle(king, oldPos)
 {
     if(king.type != CP_KING)
-        return;
+        return false;
 
     var diff = oldPos - king.position;
     var pieces = king.color == CP_W ? wPieces : bPieces;
     if(abs(diff) == 2)
     {
         if(diff > 0)
+        {
+            AddForUndo({pieces[0], "C", pieces[0].position});
             MovePieceToPos(pieces[0], king.position + 1, false);
+        }
         else
+        {
+            AddForUndo({pieces[1], "C", pieces[1].position});
             MovePieceToPos(pieces[1], king.position - 1, false);
-
+        }
         lb.Add("Castling");
+        return true;
     }
+}
+
+//m = {piece, movetype(Eated, Castling, Promotion, Regular), oldPos}
+function ChessBoard::AddForUndo(m)
+{
+    undoList[undoListHead] = m;
+    undoListHead = (undoListHead + 1) % undoListSize;
+}
+
+function ChessBoard::Undo() //TODO: what if not enough history? (Only in case of multiple undo)
+{
+    var moves = 0;
+    undoListHead = (undoListHead + undoListSize - 1) % undoListSize;
+    while(moves < 2 && undoList[undoListHead] != Void)
+    {
+        var p = undoList[undoListHead][0];
+        var oldPos = p.position;
+        if(oldPos != -1)
+            cbMatrix[p.position] = Void;
+        var newPos =  undoList[undoListHead][2];
+        p.position = newPos;
+        cbMatrix[newPos] = p;
+        //p.moved = true;
+
+        var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
+        anim.Add(p, 0.0, p.obj.GetPosition(), newPosXY, 30);
+
+        var mt =  undoList[undoListHead][1];
+        if(mt == "C")
+            moves += 0.5;
+        else if(mt == "R")
+            moves += 1;
+
+        undoList[undoListHead] = Void;
+        undoListHead = (undoListHead + undoListSize - 1) % undoListSize;
+    }
+
+    if(move == 2)
+        return true;
+    else
+        false;
 }
 
 #endif

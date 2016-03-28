@@ -836,9 +836,27 @@ function OnTimer()
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
 
-	var g;
+	var g = "X";
 	if(lm.GetGesture(&g))
 		OutputLN("GESTURE ", g, " (", lm.dataValues[0], ")");
+
+	if(g == "C" && scene == S_GAMEPLAY && cb.turn == playerColor)
+	{
+		logMessages.Add("Undoing latest 2 moves...");
+
+		hlList = null
+		if(cb.Undo())
+		{
+			logMessages.Del();
+			logMessages.Add("Undoing latest 2 moves... undo complete!");
+		}
+		else
+		{
+			logMessages.Del();
+			logMessages.Add("Undoing latest 2 moves... impossible to make undo");
+		}
+		logMessages.Add("Waiting for playrt move...");
+	}
 
 	/*
 	if(NetDataReady(lm_channel))
