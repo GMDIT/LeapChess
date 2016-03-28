@@ -439,7 +439,7 @@ function Update_Startscreen()
 			g_newgame.Rotate(90, 0, 0, 1);
 			g_exit.Rotate(90, 0, 0, 1);
 
-			logMessages.Add("Waiting for player move...");
+			logMessages.Add("Waiting for player to move...");
 		}
 		else
 		{
@@ -449,7 +449,7 @@ function Update_Startscreen()
 			g_newgame.Rotate(-90, 0, 0, 1);
 			g_exit.Rotate(-90, 0, 0, 1);
 
-			logMessages.Add("Waiting for computer move...");
+			logMessages.Add("Waiting for computer to move...");
 		}
 
 
@@ -848,14 +848,14 @@ function OnTimer()
 		if(cb.Undo())
 		{
 			logMessages.Del();
-			logMessages.Add("Undoing latest 2 moves... undo complete!");
+			logMessages.Add("Undoing latest 2 moves... undoing complete!");
 		}
 		else
 		{
 			logMessages.Del();
-			logMessages.Add("Undoing latest 2 moves... impossible to make undo");
+			logMessages.Add("Undoing latest 2 moves... impossible to undo.");
 		}
-		logMessages.Add("Waiting for player move...");
+		logMessages.Add("Waiting for player to move...");
 	}
 
 	/*

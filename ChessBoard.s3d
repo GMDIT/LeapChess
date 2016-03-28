@@ -829,12 +829,12 @@ function ChessBoard::EndTurn()
     {
         totalMovesCounter++;
         turn = CP_W;
-        lb.Add("Waiting for White move...");
+        lb.Add("Waiting for White to move...");
     }
     else
     {
         turn = CP_B;
-        lb.Add("Waiting for Black move...");
+        lb.Add("Waiting for Black to move...");
     }
 }
 
