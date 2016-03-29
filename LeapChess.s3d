@@ -833,6 +833,7 @@ function DownloadReady(RequestID)
 }
 
 var undoing = false;
+var hintRequest = false;
 function OnTimer()
 {
 	clock.Update();
@@ -851,6 +852,7 @@ function OnTimer()
 	{
 		OutputLN("GESTURE ", g, " (", lm.dataValues[0], ")");
 
+		//CCW Circle, UNDO gesture
 		if(g == "C" && scene == S_GAMEPLAY && cb.turn == playerColor)
 		{
 			logMessages.Add("Undoing latest 2 moves...");
@@ -870,8 +872,19 @@ function OnTimer()
 				logMessages.Add("Waiting for player to move...");
 			}
 		}
+		//CW Circle, HINT gesture
+		else if(g == "c" && scene == S_GAMEPLAY && cb.turn == playerColor)
+		{
+			ce.Send("go");
+			hintRequest = true;
+			logMessages.Add("Hint requested...");
+			clock.SetTimer("hintRequest", 0.6);//timerResponse = 0;
+		}
+
+
 	}
 
+	//Undo result
 	if(undoing && clock.Timeout("undoing"))
 	{
 		undoing = false;
@@ -881,6 +894,28 @@ function OnTimer()
 		logMessages.Add("Waiting for player to move...");
 	}
 
+	//Hint result
+	if (clock.Timeout("hintRequest"))
+	{
+		hintRequest = false;
+		ce_data = ce.Receive();
+		OutputLN("Hint received: " + ce_data);
+
+		var startPos = AHto64(ce_data[0], val(ce_data[1]));
+		var endPos = AHto64(ce_data[2], val(ce_data[3]));
+
+		//hint = Array(2);
+		//hint[0] = {startPos, 3};
+		//hint[1] = {endPos, 3};
+		//hlList = {2, hint};
+		hlList = {2, {{startPos, 3},{endPos, 3}}};
+		var type = cb.cbMatrix[startPos].type;
+		logMessages.Del();
+		var msg = Sprintf("Computer say: move the %s from %s%s to %s%s", bCharP[type], ce_data[0], ce_data[1], ce_data[2], ce_data[3]);
+		logMessages.Add(msg);
+
+		clock.Del("hintRequest");
+	}
 	/*
 	if(NetDataReady(lm_channel))
 	{
@@ -967,7 +1002,7 @@ function DrawHighlightSquares()
 	glLineWidth(1);
 	glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
-	var colors = {[0.2,1,0.2,0.4], [0.2,1,0.2,0.9], [1,0.2,0.2,0.9]};
+	var colors = {[0.2,1,0.2,0.4], [0.2,1,0.2,0.9], [1,0.2,0.2,0.9], [0.2, 0.2, 1, 0.7]};
 	glColor([0.2,1,0.2,0.9]);
 
 	var posX, posZ;

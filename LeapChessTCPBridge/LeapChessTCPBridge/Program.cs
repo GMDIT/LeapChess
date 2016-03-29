@@ -102,7 +102,25 @@ namespace LeapChessTCPBridge
                     //send to engine
                     myStreamWriter.Write(data + "\n");
 
-                    if (data != "ucinewgame")
+                    if(data == "go")
+                    {
+                        Console.WriteLine("Hint requested...");//: {0}", o);
+                        System.Threading.Thread.Sleep(100);
+                        //read engine output
+                        o = ReadOutput(myStreamReader);
+
+                        //TODO: it works, but is veeeery ugly
+                        var result = Regex.Split(o.Trim(), "\n\r|\r|\n");//, StringSplitOptions.RemoveEmptyEntries);
+                        var bestmove = result[result.Length - 1].Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries); //TODO: what if there isn't bestmove?
+
+                        Console.WriteLine("best move>>" + bestmove[1]);
+                        byte[] msg = System.Text.Encoding.ASCII.GetBytes(bestmove[1]);
+
+                        // Send engine output to tcp
+                        stream.Write(msg, 0, msg.Length);
+                        Console.WriteLine("Sent");//: {0}", o);
+                    }
+                    else if (data != "ucinewgame")
                     {
                         //start thinking
                         myStreamWriter.Write("go\n");
