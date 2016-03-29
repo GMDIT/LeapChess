@@ -1,0 +1,92 @@
+#ifndef _TIMER
+#define _TIMER
+
+class Timer
+{
+    var currentTime;
+    var timers;
+    var size;
+    var tps;
+
+    SetTimer(name, delta);
+    CheckTimer(name);
+    Timeout(name);
+    Del(name);
+    ClearAll();
+    Update();
+};
+
+function Timer::Timer(t, s)
+{
+    size = s;
+    timers = Array(size);
+    tps = t;
+    currentTime = 0;
+}
+
+function Timer::SetTimer(name, delta)
+{
+    var found = false;
+    var firstVoid = -1;
+    for(var i = 0; i < size && !found; i++)
+    {
+        if(timers[i] == Void && firstVoid == -1)
+            firstVoid = i;
+        else if(timers[i] != Void && timers[i][0] == name)
+        {
+            found = true;
+            timers[i][1] = currentTime;
+        }
+    }
+
+    if(!found)
+        timers[firstVoid] = {name, currentTime, delta};
+}
+
+function Timer::CheckTimer(name)
+{
+    for(var i = 0; i < size; i++)
+    {
+        if(timers[i] != Void && timers[i][0] == name)
+            return (currentTime - timers[i][1]) / tps;
+    }
+
+    return 0;
+}
+
+//WARNING: do not call on non-existent timer
+function Timer::Timeout(name)
+{
+    for(var i = 0; i < size; i++)
+    {
+        if(timers[i] != Void && timers[i][0] == name)
+            return (currentTime - timers[i][1]) / tps >= timers[i][2];
+    }
+
+    return false;
+}
+
+function Timer::Del(name)
+{
+    for(var i = 0; i < size; i++)
+    {
+        if(timers[i] != Void && timers[i][0] == name)
+        {
+            timers[i] = Void;
+            break;
+        }
+    }
+}
+
+function Timer::ClearAll()
+{
+    timers = Array(size);
+    currentTime = 0;
+}
+
+function Timer::Update()
+{
+    currentTime++;
+}
+
+#endif

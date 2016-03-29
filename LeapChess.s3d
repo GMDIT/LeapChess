@@ -11,6 +11,7 @@
 #include "MarcelloUtils.s3d"
 #include "Cameraman.s3d"
 #include "LogBox.s3d"
+#include "Timer.s3d"
 
 
 /* Set global scene parameters */
@@ -49,6 +50,7 @@ var b_exit, m_exit, g_exit;
 var g_exit_pos = [-2, 1, 0];
 
 var logMessages;
+var clock;
 /*ChessEngine server data */
 //var ce_channel;
 var ce_data;
@@ -166,7 +168,7 @@ function OnInit(params)
 	SetFrameRate(60);
 	SetAmbientLight(0.2,0.2,0.1);
 
-
+	clock = Timer(100, 10);
 
 			//CameraGetCurrent().SetDirection(1, 1, 0);
 	//CameraGetCurrent().SetTarget(CamTarget);
@@ -324,10 +326,10 @@ function OnInit(params)
 
 }
 
-var touchTimer = 0;
+//var touchTimer = 0;
 var touchElem;
 var fingerEnabled = false;
-var timerResponse = 0;
+//var timerResponse = 0;
 
 function ResetGlobals()
 {
@@ -359,12 +361,14 @@ function ResetGlobals()
 	mov_moving = false;
 	mov_piece = -1;
 	cmdSent = false;
-	touchTimer = 0;
+	//touchTimer = 0;
 	fingerEnabled = false;
-	timerResponse = 0;
+	//timerResponse = 0;
 
 	logMessages.Clear();
 	logMessages.Add("Select your color");
+
+	clock.ClearAll();
 }
 
 
@@ -394,7 +398,7 @@ function Update_Startscreen()
 
 	if(f1.GetPosition()[0] < -7)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{
-		touchTimer++;
+		//touchTimer++;
 		touchElem = CP_W;
 		f1.ForceMaterial(MGetWhite());
 		palm.ForceMaterial(MGetWhite());
@@ -403,7 +407,7 @@ function Update_Startscreen()
 	}
 	else if(f1.GetPosition()[0] > 7)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
-		touchTimer++;
+		//touchTimer++;
 		touchElem = CP_B;
 		f1.ForceMaterial(MGetBlack());
 		palm.ForceMaterial(MGetBlack());
@@ -411,15 +415,15 @@ function Update_Startscreen()
 	}
 	else
 	{
-		touchTimer = 0;
+		clock.SetTimer("touchTimer", 2.5);//touchTimer = 0;
 		f1.ForceMaterial();
 		cm.Add(CameraGetCurrent(), camPos_StartScreen,camTar_StartScreen, 0.12);
 	}
 
-	if(touchTimer > 180)
+	if(clock.Timeout("touchTimer")) // touchTimer > 180)
 	{
 		playerColor = touchElem;
-		touchTimer = 0;
+		clock.Del("touchTimer");//touchTimer = 0;
 		f1.ForceMaterial();
 		lm.ChangeSide(playerColor);
 		cm.Add(CameraGetCurrent(), CamPos[playerColor], CamTarget);
@@ -488,7 +492,7 @@ function Update_Gameplay()
 	{
 		//OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
 		//CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
-		touchTimer = 0;
+		clock.Del("touchTimer");//touchTimer = 0;
 		fingerEnabled = false;
 		f1.forceMaterial(MGetRed());
 		scene = S_ENDSCREEN;
@@ -573,9 +577,9 @@ function Update_Gameplay()
 			//NetSendToTCP(ce_channel, cmd);
 			OutputLN("CMD sent");
 			cmdSent = true;
-			timerResponse = 0;
+			clock.SetTimer("timerResponse", 0.6);//timerResponse = 0;
 		}
-		else if (!cb.isDropping && timerResponse++ > 60) //wait for the dropping pieces
+		else if (!cb.isDropping && clock.Timeout("timerResponse"))//timerResponse++ > 60) //wait for the dropping pieces
 		{
 			ce_data = ce.Receive();//NetReceiveFromTCP(ce_channel);
 			OutputLN("<< " + ce_data);
@@ -586,6 +590,8 @@ function Update_Gameplay()
 				lglMoves[p] = 2;
 			hlList = CompressArray(lglMoves);
 			cmdSent = false;
+
+			clock.Del("timerResponse");
 		}
 	}
 
@@ -730,7 +736,7 @@ function Update_Endscreen()
 
 	if(f1Pos[1] < 4)//(cb.wPieces[7].obj.IsCollidingBBox(f1))
 	{
-		touchTimer++;
+		//touchTimer++;
 		touchElem = -1;
 		f1.ForceMaterial(MGetWhite());
 
@@ -739,7 +745,7 @@ function Update_Endscreen()
 	}
 	else if(f1Pos[1] > 7 && f1Pos[1] < 12)//(cb.bPieces[7].obj.IsCollidingBBox(f1))
 	{
-		touchTimer++;
+		//touchTimer++;
 		touchElem = S_STARTSCREEN;
 		f1.ForceMaterial(MGetBlack());
 		//if(touchTimer == 1)
@@ -747,17 +753,17 @@ function Update_Endscreen()
 	}
 	else
 	{
-		touchTimer = 0;
+		clock.SetTimer("touchTimer", 2);//touchTimer = 0;
 		f1.ForceMaterial();
 
 		//var camCurrPos = CameraGetPosition();
 		//cm.Add(CameraGetCurrent(), [camCurrPos[0], camPos_StartScreen[1], camCurrPos[2]], camTar_StartScreen);
 	}
 
-	if(touchTimer > 220)
+	if(clock.Timeout("touchTimer"))//(touchTimer > 220)
 	{
 		f1.ForceMaterial();
-		touchTimer = 0;
+		clock.Del("touchTimer");//touchTimer = 0;
 		if(touchElem == -1)
 		{
 			browser.Quit();
@@ -826,35 +832,52 @@ function DownloadReady(RequestID)
 	// TODO
 }
 
+var undoing = false;
 function OnTimer()
 {
+	clock.Update();
 	//TODO: se non ricevo per tot volte, disabilita dita
-	//receive packet
+
+	//LEAPMOTION UPDATE
 	lm.Update(&palm_pos, &f0_pos, &f1_pos);
 
 	palm.SetPosition(palm_pos);
 	f0.SetPosition(f0_pos);
 	f1.SetPosition(f1_pos);
 
+	//GESTURE
 	var g = "X";
 	if(lm.GetGesture(&g))
+	{
 		OutputLN("GESTURE ", g, " (", lm.dataValues[0], ")");
 
-	if(g == "C" && scene == S_GAMEPLAY && cb.turn == playerColor)
-	{
-		logMessages.Add("Undoing latest 2 moves...");
+		if(g == "C" && scene == S_GAMEPLAY && cb.turn == playerColor)
+		{
+			logMessages.Add("Undoing latest 2 moves...");
 
-		hlList = null;
-		if(cb.Undo())
-		{
-			logMessages.Del();
-			logMessages.Add("Undoing latest 2 moves... undoing complete!");
+			hlList = null;
+			if(cb.Undo())
+			{
+				undoing = true;
+				clock.SetTimer("undoing", 1.2);
+				//logMessages.Del();
+				//logMessages.Add("Undoing latest 2 moves... undoing completed!");
+			}
+			else
+			{
+				logMessages.Del();
+				logMessages.Add("Undoing latest 2 moves... impossible to undo.");
+				logMessages.Add("Waiting for player to move...");
+			}
 		}
-		else
-		{
-			logMessages.Del();
-			logMessages.Add("Undoing latest 2 moves... impossible to undo.");
-		}
+	}
+
+	if(undoing && clock.Timeout("undoing"))
+	{
+		undoing = false;
+		clock.Del("undoing");
+		logMessages.Del();
+		logMessages.Add("Undoing latest 2 moves... undoing completed!");
 		logMessages.Add("Waiting for player to move...");
 	}
 
