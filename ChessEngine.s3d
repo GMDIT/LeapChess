@@ -20,6 +20,7 @@ function ChessEngine::ChessEngine(p)
 
 function ChessEngine::Connect()
 {
+    //return;
     var t = 3;
     do
     {
@@ -48,7 +49,14 @@ function ChessEngine::DataReady(timeout)
 
 function ChessEngine::Receive()
 {
-    return NetReceiveFromTCP(channel);
+    var data = "";
+    do
+    {
+        data =  NetReceiveFromTCP(channel);
+    }
+    while(data == "");
+
+    return data;
 }
 
 function ChessEngine::Send(msg)
