@@ -354,7 +354,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         cbMatrix[newPos] = p;
         if(oldPos != newPos)
         {
-            p.moved = true;
+            p.moved++;
             OutputLN(latestMove);
             SetEnPassant(p, oldPos, newPos);
 
@@ -408,7 +408,7 @@ function ChessBoard::EatPieceIn(pos)
 
     eatedCounters[c] = e+1;
     p.position = -1;
-    p.moved = true;
+    p.moved++;
     //cbMatrix[pos] = Void;
 }
 
@@ -780,7 +780,7 @@ function ChessBoard::MovePieceToPos(p, newPos, end)
     cbMatrix[newPos] = p;
     if(oldPos != newPos)
     {
-        p.moved = true;
+        p.moved++;
 
         var oldPosXY = p.CalcXYPosition(oldPos, corner, dimension);
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
@@ -943,10 +943,10 @@ function ChessBoard::CastlingStatus()
 
     //1.The king and the chosen rook are on the player's first rank.
     //2.Neither the king nor the chosen rook has previously moved.
-    result[0] = !wKing.moved && !wTK.moved;
-    result[1] = !wKing.moved && !wTQ.moved;
-    result[2] = !bKing.moved && !bTK.moved;
-    result[3] = !bKing.moved && !bTQ.moved;
+    result[0] = !wKing.IsMoved() && !wTK.IsMoved();
+    result[1] = !wKing.IsMoved() && !wTQ.IsMoved();
+    result[2] = !bKing.IsMoved() && !bTK.IsMoved();
+    result[3] = !bKing.IsMoved() && !bTQ.IsMoved();
 
     //3.There are no pieces between the king and the chosen rook.
     result[0] = result[0] && cbMatrix[5] == Void && cbMatrix[6] == Void;
@@ -1015,7 +1015,7 @@ function ChessBoard::Undo() //TODO: what if not enough history? (Only in case of
         var newPos =  undoList[undoListHead][2];
         p.position = newPos;
         cbMatrix[newPos] = p;
-        //p.moved = true;
+        p.moved -= 1;
 
         var newPosXY = p.CalcXYPosition(newPos, corner, dimension);
         anim.Add(p, 0.0, p.obj.GetPosition(), newPosXY, 30);
@@ -1031,7 +1031,10 @@ function ChessBoard::Undo() //TODO: what if not enough history? (Only in case of
     }
 
     if(moves >= 2)
+    {
+        totalMovesCounter--;
         return true;
+    }
     else
         return false;
 }
