@@ -102,6 +102,7 @@ namespace LeapChessTCPBridge
                     //send to engine
                     myStreamWriter.Write(data + "\n");
 
+                    //Hint requested
                     if(data == "go")
                     {
                         Console.WriteLine("Hint requested...");//: {0}", o);
@@ -139,13 +140,16 @@ namespace LeapChessTCPBridge
                         stream.Write(msg, 0, msg.Length);
                         Console.WriteLine("Sent");//: {0}", o);
 
+                        /*
                         //Send to engine the bestmove
-                        myStreamWriter.Write(data + " {0}\nd\n", bestmove[1]);
+                        System.Threading.Thread.Sleep(100);
+                        myStreamWriter.Write(data + " {0}\n", bestmove[1]);
+                        myStreamWriter.Write("d\n");
                         System.Threading.Thread.Sleep(100);
                         //read engine output
                         Console.WriteLine("Updated status: {0} {1} d ", data, bestmove[1]);
                         o = ReadOutput(myStreamReader);
-
+                        */
                     }
                     else
                         Console.WriteLine("************* Starting new game *************");
