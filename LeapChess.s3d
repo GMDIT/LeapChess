@@ -591,6 +591,23 @@ function Update_Gameplay()
 			hlList = CompressArray(lglMoves);
 			cmdSent = false;
 
+			//Playback chess engine move, to update ce status
+			if(cb.totalMovesCounter == 1)
+			{
+				if(playerColor == CP_W)
+					cmd = Sprintf("position startpos moves %s", ce_data);
+				else
+					cmd = Sprintf("position startpos");
+			}
+			else
+				cmd = Sprintf("position fen %s moves %s", cb.GenerateFENChessboard(), ce_data);
+
+			OutputLN(cmd);
+			ce.Send(cmd);
+			//NetSendToTCP(ce_channel, cmd);
+			OutputLN("CMD sent");
+			ce_data = ce.Receive(); //active wait TODO: move
+
 			clock.Del("timerResponse");
 		}
 	}
@@ -834,6 +851,7 @@ function DownloadReady(RequestID)
 
 var undoing = false;
 var hintRequest = false;
+var restartGame = false;
 function OnTimer()
 {
 	clock.Update();
@@ -851,36 +869,74 @@ function OnTimer()
 	if(lm.GetGesture(&g))
 	{
 		OutputLN("GESTURE ", g, " (", lm.dataValues[0], ")");
-
-		//CCW Circle, UNDO gesture
-		if(g == "C" && scene == S_GAMEPLAY && cb.turn == playerColor)
+		if(scene == S_GAMEPLAY)
 		{
-			logMessages.Add("Undoing latest 2 moves...");
+			//CCW Circle, UNDO gesture
+			if(g == "C" && cb.turn == playerColor)
+			{
+				logMessages.Add("Undoing latest 2 moves...");
 
-			hlList = null;
-			if(cb.Undo())
-			{
-				undoing = true;
-				clock.SetTimer("undoing", 1.2);
-				//logMessages.Del();
-				//logMessages.Add("Undoing latest 2 moves... undoing completed!");
+				hlList = null;
+				if(cb.Undo())
+				{
+					undoing = true;
+					clock.SetTimer("undoing", 1.2);
+				}
+				else
+				{
+					logMessages.Del();
+					logMessages.Add("Undoing latest 2 moves... impossible to undo.");
+					logMessages.Add("Waiting for player to move...");
+				}
 			}
-			else
+			//CW Circle, HINT gesture
+			else if(g == "c" && cb.turn == playerColor)
 			{
-				logMessages.Del();
-				logMessages.Add("Undoing latest 2 moves... impossible to undo.");
-				logMessages.Add("Waiting for player to move...");
+				ce.Send("go");
+				hintRequest = true;
+				logMessages.Add("Hint requested...");
+				clock.SetTimer("hintRequest", 0.6);//timerResponse = 0;
+			}
+			//Swipe, Restart gesture
+			else if(g == "S")
+			{
+				if(!restartGame)
+				{
+					restartGame = true;
+					logMessages.Add("Swipe again to return to main menu...");
+					clock.SetTimer("restartGame", 3);
+				}
+				else if(restartGame && clock.Timeout("restartGame"))
+				{
+					restartGame = false;
+					clock.Del("restartGame");
+					logMessages.Del(); //TODO: what if another message before timeout?
+					logMessages.Add("Swipe again to return to main menu... TIMEOUT");
+				}
+				else //if(restartGame && !clock.Timeout("restartGame"))
+				{
+					restartGame = false;
+					clock.Del("restartGame");
+
+					//RESET
+					cb.Init();
+					ResetGlobals();
+					ce.Send("ucinewgame");
+					lm.ChangeSide(LM_SIDE_M);
+					cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
+					scene = S_STARTSCREEN;
+				}
+				
 			}
 		}
-		//CW Circle, HINT gesture
-		else if(g == "c" && scene == S_GAMEPLAY && cb.turn == playerColor)
+		else if(scene == S_STARTSCREEN)
 		{
-			ce.Send("go");
-			hintRequest = true;
-			logMessages.Add("Hint requested...");
-			clock.SetTimer("hintRequest", 0.6);//timerResponse = 0;
+			if(g == "C")
+			{
+				OutputLN("Terminated with gesture...");
+				browser.Quit();
+			}
 		}
-
 
 	}
 
@@ -909,7 +965,7 @@ function OnTimer()
 		//hint[1] = {endPos, 3};
 		//hlList = {2, hint};
 		hlList = {2, {{startPos, 3},{endPos, 3}}};
-		var type = cb.cbMatrix[startPos].type;
+		var type = cb.cbMatrix[startPos] != Void ? cb.cbMatrix[startPos].type : 0;
 		logMessages.Del();
 		var msg = Sprintf("Computer say: move the %s from %s%s to %s%s", bCharP[type], ce_data[0], ce_data[1], ce_data[2], ce_data[3]);
 		logMessages.Add(msg);

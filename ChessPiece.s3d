@@ -63,6 +63,7 @@ class ChessPiece
     CalcXYPosition(newPos, c, d);
     GetOffSet(d);
     Promote();
+    IsMoved();
 };
 
 function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
@@ -72,7 +73,7 @@ function ChessPiece::ChessPiece(t, pos, c, mat, mirror)
     color = c;
     material = mat;
     isDropping = false;
-    moved = false;
+    moved = 0;
 
     switch (t) {
         case CP_PAWN:
@@ -155,4 +156,8 @@ function ChessPiece::Promote()
     }
 }
 
+function ChessPiece::IsMoved()
+{
+    return moved > 0;
+}
 #endif
