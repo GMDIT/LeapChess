@@ -7,3 +7,5 @@
 *.exe
 LeapChessTCPBridge/LeapChessTCPBridge/bin
 LeapChessTCPBridge/LeapChessTCPBridge/obj
+LeapMotionServer/LeapMotionServer/bin
+LeapMotionServer/LeapMotionServer/obj
