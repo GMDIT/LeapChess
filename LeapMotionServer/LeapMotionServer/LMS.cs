@@ -183,7 +183,7 @@ class SampleListener : Listener
                     gestureCounter = 0;
                 }
                 */
-                if (gesture.DurationSeconds > 0.25 || gesture.Type == Gesture.GestureType.TYPE_SWIPE) //(gesture.State == Gesture.GestureState.STATE_UPDATE)/
+                //if (gesture.DurationSeconds > 0.1 || gesture.Type == Gesture.GestureType.TYPE_SWIPE) //(gesture.State == Gesture.GestureState.STATE_UPDATE)/
                 switch (gesture.Type)
                 {
                     case Gesture.GestureType.TYPE_CIRCLE:

@@ -133,7 +133,7 @@ function ChessBoard::Init()
     isDropping = false;
     latestMove = null;
 
-    undoListSize = 10;
+    undoListSize = 20;
     undoList = Array(undoListSize);
     undoListHead = 0;
 
@@ -355,7 +355,6 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
         if(oldPos != newPos)
         {
             p.moved++;
-            OutputLN(latestMove);
             SetEnPassant(p, oldPos, newPos);
 
             var cr = false;
@@ -363,6 +362,7 @@ function ChessBoard::DropToNewPosition(id, legalMoves)
                 cr = Castle(p, oldPos);
 
             latestMove = {totalMovesCounter, turn, GenerateMovetext(oldPos, newPos), p};
+            OutputLN(latestMove);
 
             if(!cr)
                 AddForUndo({p, "R", oldPos});
@@ -765,7 +765,7 @@ function ChessBoard::MakeMovetextMove(movetext)
     var endPos = AHto64(movetext[2], val(movetext[3]));
     highlightSquares[startPos] = 1;
     highlightSquares[endPos] = 1;
-    AddForUndo({cbMatrix[startPos], "R", startPos});
+    AddForUndo({cbMatrix[startPos], "R", startPos}); //TODO: enemy castling
     MovePieceToPos(cbMatrix[startPos], endPos, true);
     return highlightSquares;
 }

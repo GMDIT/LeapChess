@@ -72,6 +72,12 @@ var f0_pos = [10,20.0,0.0];
 var f1;
 var f1_pos = [-100,20.0,0.0];
 
+/* gesture */
+var undoing = false;
+var undoRequest = false;
+var hintRequest = false;
+var restartGame = false;
+
 /*chessboard */
 var cb;
 var hlList = null;
@@ -153,7 +159,6 @@ function OnDownload()
 	// TODO: download your resources here
 	// E.g.: FileDownload("resource.ext");
 
-	//FileDownload("Data.zip");	// Download di un unico archivio contenente le mesh e le texture
 	FileDownload("gui.zip");
 	FileDownload("3dui.zip");
 	FileDownload("chessSet.zip");
@@ -204,11 +209,13 @@ function OnInit(params)
 	ce = ChessEngine(ENGINE_PORT);
 	ce.Connect();
 
-	/*Connectin to LeapMotionServer */
+	/*Connect to LeapMotionServer */
 	lm = LeapMotion(LEAP_PORT, LM_SIDE_M);
 	lm.Connect();
-	//lm_channel = NetCreateChannel(LEAP_PORT, 0, VR_NO_BLOCKING);
-	//OutputLN(lm_channel);
+
+	//consume any residual gesture;
+	var g;
+	lm.GetGesture(&g);
 
 	/*Init fingers */
 
@@ -365,12 +372,16 @@ function ResetGlobals()
 	fingerEnabled = false;
 	//timerResponse = 0;
 
+	undoing = false;
+	undoRequest = false;
+	hintRequest = false;
+	restartGame = false;
+
 	logMessages.Clear();
 	logMessages.Add("Select your color");
 
 	clock.ClearAll();
 }
-
 
 function Update_Startscreen()
 {
@@ -427,9 +438,6 @@ function Update_Startscreen()
 		f1.ForceMaterial();
 		lm.ChangeSide(playerColor);
 		cm.Add(CameraGetCurrent(), CamPos[playerColor], CamTarget);
-		//CameraSetTarget(CamTarget);
-		//CameraSetPosition(CamPos[playerColor]);
-		//MoveCameraAndTarget(CamPos, CamTarget, 240);
 		scene = S_GAMEPLAY;
 
 		logMessages.Clear();
@@ -485,7 +493,7 @@ function Update_Gameplay()
 	if(!endGame)
 	{
 		endGame = cb.IsCheckMate(cb.turn);
-		//endGame = cb.totalMovesCounter == 2; //TODO::DELETEME!!!
+		//endGame = cb.totalMovesCounter == 2; //for debug
 		//CameraMoveMouse();
 	}
 	else
@@ -591,7 +599,7 @@ function Update_Gameplay()
 			hlList = CompressArray(lglMoves);
 			cmdSent = false;
 
-			//Playback chess engine move, to update ce status
+			//Playback chess engine move, update chess engine status
 			if(cb.totalMovesCounter == 1)
 			{
 				if(playerColor == CP_W)
@@ -604,7 +612,6 @@ function Update_Gameplay()
 
 			OutputLN(cmd);
 			ce.Send(cmd);
-			//NetSendToTCP(ce_channel, cmd);
 			OutputLN("CMD sent");
 			ce_data = ce.Receive(); //active wait TODO: move
 
@@ -849,9 +856,7 @@ function DownloadReady(RequestID)
 	// TODO
 }
 
-var undoing = false;
-var hintRequest = false;
-var restartGame = false;
+
 function OnTimer()
 {
 	clock.Update();
@@ -874,20 +879,43 @@ function OnTimer()
 			//CCW Circle, UNDO gesture
 			if(g == "C" && cb.turn == playerColor)
 			{
-				logMessages.Add("Undoing latest 2 moves...");
-
-				hlList = null;
-				if(cb.Undo())
+				if(!undoRequest)
 				{
-					undoing = true;
-					clock.SetTimer("undoing", 1.2);
+					logMessages.Add("Draw another circle to undo latest 2 moves...");
+					undoRequest = true;
+					clock.SetTimer("undoRequest", 3);
 				}
-				else
+				else if(undoRequest && clock.Timeout("undoRequest"))
 				{
+					undoRequest = false;
 					logMessages.Del();
-					logMessages.Add("Undoing latest 2 moves... impossible to undo.");
-					logMessages.Add("Waiting for player to move...");
+					logMessages.Add("Draw another circle to undo latest 2 moves...TIMEOUT");
+					clock.Del("undoRequest");
 				}
+				else //if(undoRequest && !clock.Timeout("undoRequest"))
+				{
+					logMessages.Add("Undoing latest 2 moves...");
+					undoRequest = false;
+					clock.Del("undoRequest");
+					hlList = null;
+					if(cb.Undo())
+					{
+						undoing = true;
+						clock.SetTimer("undoing", 1.2);
+						var cmd = Sprintf("position fen %s", cb.GenerateFENChessboard());
+						ce.Send(cmd);
+						OutputLN("Undo sent");
+					}
+					else
+					{
+						logMessages.Del();
+						logMessages.Add("Undoing latest 2 moves... impossible to undo.");
+						logMessages.Add("Waiting for player to move...");
+					}
+				}
+
+
+
 			}
 			//CW Circle, HINT gesture
 			else if(g == "c" && cb.turn == playerColor)
@@ -926,7 +954,7 @@ function OnTimer()
 					cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
 					scene = S_STARTSCREEN;
 				}
-				
+
 			}
 		}
 		else if(scene == S_STARTSCREEN)
@@ -937,7 +965,6 @@ function OnTimer()
 				browser.Quit();
 			}
 		}
-
 	}
 
 	//Undo result
@@ -946,6 +973,7 @@ function OnTimer()
 		undoing = false;
 		clock.Del("undoing");
 		logMessages.Del();
+
 		logMessages.Add("Undoing latest 2 moves... undoing completed!");
 		logMessages.Add("Waiting for player to move...");
 	}
@@ -965,9 +993,9 @@ function OnTimer()
 		//hint[1] = {endPos, 3};
 		//hlList = {2, hint};
 		hlList = {2, {{startPos, 3},{endPos, 3}}};
-		var type = cb.cbMatrix[startPos] != Void ? cb.cbMatrix[startPos].type : 0;
+		var type = cb.cbMatrix[startPos] != Void ? bCharP[cb.cbMatrix[startPos].type] : "piece";
 		logMessages.Del();
-		var msg = Sprintf("Computer say: move the %s from %s%s to %s%s", bCharP[type], ce_data[0], ce_data[1], ce_data[2], ce_data[3]);
+		var msg = Sprintf("Computer say: move the %s from %s%s to %s%s", type, ce_data[0], ce_data[1], ce_data[2], ce_data[3]);
 		logMessages.Add(msg);
 
 		clock.Del("hintRequest");
