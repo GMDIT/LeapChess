@@ -993,6 +993,7 @@ function ChessBoard::Castle(king, oldPos)
         lb.Add("Castling");
         return true;
     }
+    else return false;
 }
 
 //m = {piece, movetype(Eated, Castling, Promotion, Regular), oldPos}
