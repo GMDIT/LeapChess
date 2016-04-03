@@ -6,6 +6,7 @@ class LogBox
     var position;
     var messages;
     var latest, size;
+    var sound;
 
     Add(m);
     Del();
@@ -13,11 +14,12 @@ class LogBox
     Draw();
 };
 
-function LogBox::LogBox(s)
+function LogBox::LogBox(s, n)
 {
     size = s;
     messages = Array(size);
     latest = 0;
+    sound = n;
 }
 
 function LogBox::Add(m)
@@ -29,6 +31,8 @@ function LogBox::Add(m)
     messages[latest] = m;
     OutputLN(messages[latest]);
     latest = (latest + 1) % size;
+
+    sound.Play(false);
 }
 
 function LogBox::Del()
@@ -54,7 +58,7 @@ function LogBox::Draw()
 
     ConsoleColor( 1, 1, 1, 1 ) ;
     //ConsoleRect(0.01, 0.01, 0.99, 0.99);
-    ConsoleFont("Arial",15);
+    ConsoleFont("Terminal",15);
     while(messages[curr] != Void && tot < size)
     {
         ConsoleText(0.01, 0.03 * tot + 0.01, messages[curr]);

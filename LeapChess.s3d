@@ -51,6 +51,10 @@ var g_exit_pos = [-2, 1, 0];
 
 var logMessages;
 var clock;
+
+/*sounds*/
+var s_blip, s_applause, s_drop, s_ting;
+
 /*ChessEngine server data */
 //var ce_channel;
 var ce_data;
@@ -164,6 +168,7 @@ function OnDownload()
 	FileDownload("chessSet.zip");
 	FileDownload("textures.zip");
 	FileDownload("g_lowres_skybox.zip");
+	FileDownload("sounds.zip");
 
 	FileDownload(shader_name);
 }
@@ -217,8 +222,21 @@ function OnInit(params)
 	var g;
 	lm.GetGesture(&g);
 
-	/*Init fingers */
+	/*sounds*/
+	s_blip = CVmMMMp3();
+	s_blip.Load("blip.wma");
+	s_blip.SetVolume(1);
+	s_applause = CVmMMMp3();
+	s_applause.Load("applause.wma");
+	s_applause.SetVolume(1);
+	s_drop = CVmMMMp3();
+	s_drop.Load("drop.wma");
+	s_drop.SetVolume(1);
+	s_ting = CVmMMMp3();
+	s_ting.Load("ting.wma");
+	s_ting.SetVolume(1);
 
+	/*Init fingers */
 	/*Generating the sphere */
 	var num_seg = 10;
 	var radius = 0.7;
@@ -256,7 +274,7 @@ function OnInit(params)
 	o_table.Normalize(50);
 	o_table.SetPosition([0,-20,0]);
 
-	logMessages = LogBox(9);
+	logMessages = LogBox(9, s_ting);
 	logMessages.Add("Select your side");
 
 	cb = ChessBoard([-16,0,-16], 32, MGetWhite(), MGetBlack(), logMessages);
@@ -433,6 +451,7 @@ function Update_Startscreen()
 
 	if(clock.Timeout("touchTimer")) // touchTimer > 180)
 	{
+		s_blip.Play(false);
 		playerColor = touchElem;
 		clock.Del("touchTimer");//touchTimer = 0;
 		f1.ForceMaterial();
@@ -498,6 +517,7 @@ function Update_Gameplay()
 	}
 	else
 	{
+		s_applause.Play(false);
 		//OutputLN("Checkmate! ", cb.turn == CP_W ? "Black " : "White ", "win!!!");
 		//CameraSetPosition(vectorRotate(0.3, 0, 1, 0,CameraGetPosition()));
 		clock.Del("touchTimer");//touchTimer = 0;
@@ -554,6 +574,8 @@ function Update_Gameplay()
 				mov_piece = -1;
 				lglMoves = null;
 				hlList = null;
+
+				s_blip.Play(false);
 			}
 			else
 				cb.FreeMovePiece(mov_piece, f0.GetPosition() - mov_offset, lglMoves);
@@ -598,6 +620,8 @@ function Update_Gameplay()
 				lglMoves[p] = 2;
 			hlList = CompressArray(lglMoves);
 			cmdSent = false;
+
+			s_blip.Play(false);
 
 			//Playback chess engine move, update chess engine status
 			if(cb.totalMovesCounter == 1)
@@ -790,7 +814,7 @@ function Update_Endscreen()
 		clock.Del("touchTimer");//touchTimer = 0;
 		if(touchElem == -1)
 		{
-			browser.Quit();
+			//browser.Quit();
 		}
 		else
 		{
@@ -801,6 +825,8 @@ function Update_Endscreen()
 			lm.ChangeSide(LM_SIDE_M);
 			cm.Add(CameraGetCurrent(), camPos_StartScreen, camTar_StartScreen);
 			scene = S_STARTSCREEN;
+
+			s_blip.Play(false);
 		}
 	}
 }
